@@ -1,0 +1,57 @@
+.context-menu {
+	-fx-background-color: #222;
+	-fx-border-color: #444;
+	-fx-border-radius: 0px 0px 2px 2px;
+}
+
+.menu .label {
+	-fx-text-fill: #ddd;
+}
+
+.menu-bar {
+	-fx-background-color: #333;
+}
+
+.tab-pane {
+	-fx-tab-min-height: 20px;
+	-fx-tab-max-height: 20px;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+	-fx-background-color: #333;
+}
+
+.tab-pane .tab {
+	-fx-background-color: #444;
+	-fx-border-radius: 0px;
+}
+
+.tab-pane .tab .tab-label {
+	-fx-text-fill: #ddd;
+}
+
+.button {
+	-fx-background-color: 
+        rgba(0,0,0,0.08),
+        linear-gradient(#444, #333),
+        linear-gradient(#202020 0%, #1b1b1b 100%);
+    -fx-background-insets: 0 0 -1 0,0,1;
+    -fx-background-radius: 3,3,2;
+    -fx-padding: 3 12 3 12;
+    -fx-text-fill: #ccc;
+    -fx-font-size: 14px;
+}
+
+.button:pressed {
+	-fx-background-color: 
+        rgba(0,0,0,0.08),
+        linear-gradient(#333, #222),
+        linear-gradient(#202020 0%, #1b1b1b 100%);
+}
+
+.button:armed {
+	-fx-background-color: 
+        rgba(0,0,0,0.08),
+        linear-gradient(#333, #222),
+        linear-gradient(#1b1b1b 0%, #202020 100%);
+}
