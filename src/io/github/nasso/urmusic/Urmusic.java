@@ -37,11 +37,14 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.effect.Effect;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -51,17 +54,30 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 public class Urmusic extends Application {
-	public static final boolean DEBUG = false;
+	public static final Background PANES_BACKGROUND = new Background(new BackgroundFill(Color.web("#111"), new CornerRadii(4), null));
+	public static final Effect PANES_EFFECT = new DropShadow(16, Color.BLACK);
+	
+	public static final boolean DEBUG = true;
 	public static final int FFTSIZE = 2048;
 	public static final int FFTSIZE_HALF = FFTSIZE / 2;
 	
 	public static final double EXPORT_VID_PANES_OFFSET_TOP = 32;
 	public static final double EXPORT_VID_PANES_OFFSET_BOTTOM = 32;
 	
+	public static final File APPLICATION_PREFERENCES_FILE = new File("urmusic.pref");
+	
 	public static void main(String[] argv) {
+		if(!DEBUG) {
+			try {
+				System.setErr(new PrintStream(new File("urmusic.err.log")));
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
 		try {
-			System.setErr(new PrintStream(new File("urmusic.err.log")));
-		} catch(Exception e) {
+			ApplicationPreferences.load(APPLICATION_PREFERENCES_FILE);
+		} catch(IOException e) {
 			e.printStackTrace();
 		}
 		
@@ -90,6 +106,7 @@ public class Urmusic extends Application {
 	private static FileChooser fileChooser = new FileChooser();
 	private static FileChooser audioFileChooser = new FileChooser();
 	private static Alert aboutDialog;
+	private static Alert errorAlert;
 	
 	private static AnalyseData analyseData;
 	
@@ -271,7 +288,8 @@ public class Urmusic extends Application {
 		});
 		
 		Urmusic.loadPane = new UrLoadingPane();
-		// TODO: load pane for sounds
+		Urmusic.loadPane.layoutXProperty().bind(sce.widthProperty().divide(2).subtract(Urmusic.loadPane.widthProperty().divide(2)));
+		Urmusic.loadPane.layoutYProperty().bind(sce.heightProperty().divide(2).subtract(Urmusic.loadPane.heightProperty().divide(2)));
 		
 		Urmusic.exportingVidPane = new UrExportingVideoStatusPane();
 		Urmusic.exportingVidPane.layoutXProperty().bind(sce.widthProperty().divide(2).subtract(Urmusic.exportingVidPane.widthProperty().divide(2)));
@@ -308,6 +326,12 @@ public class Urmusic extends Application {
 		Urmusic.aboutDialog.initOwner(Urmusic.stg);
 		Urmusic.aboutDialog.initModality(Modality.WINDOW_MODAL);
 		
+		Urmusic.errorAlert = new Alert(Alert.AlertType.ERROR);
+		Urmusic.errorAlert.setTitle("Error");
+		Urmusic.errorAlert.setHeaderText(null);
+		Urmusic.errorAlert.initOwner(Urmusic.stg);
+		Urmusic.errorAlert.initModality(Modality.WINDOW_MODAL);
+		
 		stg.setOnCloseRequest((e) -> {
 			Urmusic.thePlayer.setCurrentSound(null);
 			
@@ -321,6 +345,12 @@ public class Urmusic extends Application {
 				} catch(IOException e1) {
 					e1.printStackTrace();
 				}
+			}
+			
+			try {
+				ApplicationPreferences.save(APPLICATION_PREFERENCES_FILE);
+			} catch(IOException e1) {
+				e1.printStackTrace();
 			}
 		});
 		
@@ -406,8 +436,6 @@ public class Urmusic extends Application {
 		
 		// If recording...
 		if(Urmusic.vidStream != null) {
-			// TODO: test this shit
-			
 			if(audioAnalysisFrameLength > vidFrameLength) {
 				// FIXME
 				// Here: time to next audio analysis frame > time to next video frame
@@ -524,13 +552,16 @@ public class Urmusic extends Application {
 	}
 	
 	private static void loadSound(File f) {
+		Urmusic.loadPane.startLoading();
 		Thread t = new Thread(() -> {
-			Sound loadedSound = AudioEngine.ENGINE.loadSound(f, Urmusic.loadPane.getBoundTaskProperties());
+			Sound loadedSound = AudioEngine.ENGINE.loadSound(f);
 			
 			if(loadedSound != null) {
 				Urmusic.thePlayer.setCurrentSound(loadedSound);
 				loadedSound.startAnalysis(ApplicationPreferences.audioAnalysisFramerate);
 			}
+			
+			Urmusic.loadPane.stopLoading();
 		});
 		t.setDaemon(true);
 		t.start();
@@ -591,9 +622,6 @@ public class Urmusic extends Application {
 	private static void startVideoExport(VideoExportSettings s) {
 		Urmusic.vidSettings = s;
 		
-		// TODO: DEBUG TO REMOVE
-		// Urmusic.vidSettings.durationSec = 3;
-		
 		try {
 			Urmusic.vidStream = VideoEngine.ENGINE.createStream(Urmusic.vidSettings);
 		} catch(Exception e) {
@@ -624,6 +652,11 @@ public class Urmusic extends Application {
 				return null;
 			}
 		};*/
+	}
+	
+	public static void showError(String err) {
+		Urmusic.errorAlert.setContentText(err);
+		Urmusic.errorAlert.show();
 	}
 	
 	public static void bringTheModality() {

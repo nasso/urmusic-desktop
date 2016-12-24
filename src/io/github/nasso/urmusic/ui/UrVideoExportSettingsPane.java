@@ -9,7 +9,6 @@ import io.github.nasso.urmusic.audio.Sound;
 import io.github.nasso.urmusic.video.VideoExportSettings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -27,7 +26,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
-import javafx.stage.Modality;
 
 public class UrVideoExportSettingsPane extends Pane {
 	private Label titleLabel;
@@ -48,16 +46,9 @@ public class UrVideoExportSettingsPane extends Pane {
 	
 	private Consumer<VideoExportSettings> onSettingFinished;
 	
-	private Alert errorAlert;
-	
 	public UrVideoExportSettingsPane() {
-		this.setBackground(new Background(new BackgroundFill(Color.web("#111"), new CornerRadii(4), null)));
-		this.setEffect(new DropShadow(16, Color.BLACK));
-		
-		this.errorAlert = new Alert(Alert.AlertType.ERROR);
-		this.errorAlert.setTitle("Export error");
-		this.errorAlert.setHeaderText(null);
-		this.errorAlert.initModality(Modality.APPLICATION_MODAL);
+		this.setBackground(Urmusic.PANES_BACKGROUND);
+		this.setEffect(Urmusic.PANES_EFFECT);
 		
 		this.titleLabel = new Label("Export to video");
 		this.titleLabel.setLayoutY(16);
@@ -137,11 +128,6 @@ public class UrVideoExportSettingsPane extends Pane {
 		this.setVisible(false);
 	}
 	
-	private void showError(String err) {
-		this.errorAlert.setContentText(err);
-		this.errorAlert.show();
-	}
-	
 	private boolean checkFields() {
 		this.settings.outputFile = outputFileField.getText();
 		this.settings.constantRateFactor = Integer.parseInt(constantRateFactorField.getText());
@@ -163,7 +149,7 @@ public class UrVideoExportSettingsPane extends Pane {
 		}
 		
 		if(this.settings.outputFile.equals("")) {
-			this.showError("The output file isn't valid.");
+			Urmusic.showError("The output file isn't valid.");
 			return false;
 		}
 		
@@ -298,7 +284,7 @@ public class UrVideoExportSettingsPane extends Pane {
 	
 	public void beginSetting(Sound sound) {
 		if(sound == null) {
-			this.showError("You must open a sound in order to export a video.");
+			Urmusic.showError("You must open a sound in order to export a video.");
 			return;
 		}
 		

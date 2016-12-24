@@ -76,6 +76,8 @@ public class JFXSound implements Sound {
 					true);
 			// @format:on
 			
+			int channelCount = baseFormat.getChannels();
+			
 			this.din = AudioSystem.getAudioInputStream(decodedFormat, in);
 			
 			// Read raw PCM data (byte array of shorts)
@@ -85,14 +87,18 @@ public class JFXSound implements Sound {
 			while((nBytesRead = this.din.read(buffer, 0, buffer.length)) != -1) {
 				baos.write(buffer, 0, nBytesRead);
 			}
+			buffer = null;
 			
 			byte[] byteData = baos.toByteArray();
+			baos = null;
 			
 			// Convert the byte data to short data to floating point PCM
-			this.audioData = new float[baos.size() / 4];
+			this.audioData = new float[byteData.length / channelCount / 2];
 			for(int i = 0, l = this.audioData.length; i < l; i++) {
-				this.audioData[i] = Utils.clamp((short) (((byteData[i * 4] & 0xFF) << 8) | (byteData[i * 4 + 1] & 0xFF)) / (float) Short.MAX_VALUE, -1.0f, 1.0f);
+				this.audioData[i] = Utils.clamp((short) (((byteData[i * channelCount * 2] & 0xFF) << 8) | (byteData[i * channelCount * 2 + 1] & 0xFF)) / (float) Short.MAX_VALUE, -1.0f, 1.0f);
 			}
+			
+			byteData = null;
 			
 			this.in.close();
 			this.din.close();

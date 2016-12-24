@@ -1,6 +1,9 @@
 bin/*
 .settings/*
 ignore/*
+urmusic.pref
+builds/lib/*
+builds/presets/*
 
 *.war
 *.ear

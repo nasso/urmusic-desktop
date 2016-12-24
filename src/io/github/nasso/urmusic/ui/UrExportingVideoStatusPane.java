@@ -8,7 +8,6 @@ import javafx.beans.property.FloatPropertyBase;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Background;
@@ -47,8 +46,8 @@ public class UrExportingVideoStatusPane extends Pane {
 	private Runnable onCancel;
 	
 	public UrExportingVideoStatusPane() {
-		this.setBackground(new Background(new BackgroundFill(Color.web("#111"), new CornerRadii(4), null)));
-		this.setEffect(new DropShadow(16, Color.BLACK));
+		this.setBackground(Urmusic.PANES_BACKGROUND);
+		this.setEffect(Urmusic.PANES_EFFECT);
 		
 		this.exportProgressLabel = new Label("Exporting nothing.");
 		this.exportProgressLabel.setLayoutY(16);
