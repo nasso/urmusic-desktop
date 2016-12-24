@@ -5,4 +5,4 @@ JTransforms: https://sites.google.com/site/piotrwendykier/software/jtransforms
 GSON: https://github.com/google/gson
 MP3SPI: http://www.javazoom.net/mp3spi/mp3spi.html
 
-Icons by https://icons8.co
+Icons by https://icons8.com
