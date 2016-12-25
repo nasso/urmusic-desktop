@@ -31,6 +31,7 @@ import io.github.nasso.urmusic.video.VideoStream;
 import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -66,7 +67,7 @@ public class Urmusic extends Application {
 	public static final Background PANES_BACKGROUND = new Background(new BackgroundFill(Color.web("#111"), new CornerRadii(4), null));
 	public static final Effect PANES_EFFECT = new DropShadow(16, Color.BLACK);
 	
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	public static final int FFTSIZE = 2048;
 	public static final int FFTSIZE_HALF = FFTSIZE / 2;
 	
@@ -75,6 +76,7 @@ public class Urmusic extends Application {
 	
 	public static final File APPLICATION_PREFERENCES_FILE = new File("urmusic.pref");
 	
+	@SuppressWarnings("resource")
 	public static void main(String[] argv) {
 		if(!DEBUG) {
 			try {
@@ -681,8 +683,10 @@ public class Urmusic extends Application {
 	}
 	
 	public static void showError(String err) {
-		Urmusic.errorAlert.setContentText(err);
-		Urmusic.errorAlert.show();
+		Platform.runLater(() -> {
+			Urmusic.errorAlert.setContentText(err);
+			Urmusic.errorAlert.show();
+		});
 	}
 	
 	public static void bringTheModality() {
