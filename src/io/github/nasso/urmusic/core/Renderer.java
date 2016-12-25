@@ -305,7 +305,7 @@ public class Renderer {
 				
 				this.motionEffect.setInput(finalEffect);
 				this.motionEffect.setAngle(angle);
-				this.motionEffect.setRadius(dist * this.motionBlurAmount);
+				this.motionEffect.setRadius(Utils.clamp(dist * this.motionBlurAmount, 0.0, 63.0));
 				
 				finalEffect = this.motionEffect;
 			} else {

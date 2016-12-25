@@ -124,6 +124,7 @@ public class UrVideoExportSettingsPane extends Pane {
 			this.settings.motionBlur = v;
 			if(Urmusic.DEBUG) System.out.println("Motion blur: " + v);
 		}, "If enabled, there'll be motion blur. It's looks cool.");
+		this.motionBlurField.setDisable(true); // TODO: Enable motion blur when it'll be fixed
 		
 		this.setVisible(false);
 	}

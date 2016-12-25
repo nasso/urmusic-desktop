@@ -8,7 +8,7 @@ import io.github.nasso.urmusic.expression.ExpressionEngine;
 import io.github.nasso.urmusic.expression.ExpressionProperty;
 import javafx.scene.paint.Color;
 
-public class Section {
+public class Section extends SectionGroup {
 	public String name = "A section";
 	public SectionType type = SectionType.FREQ;
 	public boolean visible = true;

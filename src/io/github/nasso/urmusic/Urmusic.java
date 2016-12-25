@@ -4,7 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import io.github.nasso.urmusic.audio.AnalyseData;
 import io.github.nasso.urmusic.audio.AudioEngine;
@@ -12,6 +19,8 @@ import io.github.nasso.urmusic.audio.Sound;
 import io.github.nasso.urmusic.core.FrameProperties;
 import io.github.nasso.urmusic.core.Renderer;
 import io.github.nasso.urmusic.expression.ExpressionEngine;
+import io.github.nasso.urmusic.log.LoggingOutputStream;
+import io.github.nasso.urmusic.log.StdOutErrLevel;
 import io.github.nasso.urmusic.ui.ThePlayer;
 import io.github.nasso.urmusic.ui.UrExportingVideoStatusPane;
 import io.github.nasso.urmusic.ui.UrLoadingPane;
@@ -57,7 +66,7 @@ public class Urmusic extends Application {
 	public static final Background PANES_BACKGROUND = new Background(new BackgroundFill(Color.web("#111"), new CornerRadii(4), null));
 	public static final Effect PANES_EFFECT = new DropShadow(16, Color.BLACK);
 	
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	public static final int FFTSIZE = 2048;
 	public static final int FFTSIZE_HALF = FFTSIZE / 2;
 	
@@ -69,7 +78,23 @@ public class Urmusic extends Application {
 	public static void main(String[] argv) {
 		if(!DEBUG) {
 			try {
-				System.setErr(new PrintStream(new File("urmusic.err.log")));
+				// initialize logging to go to rolling log file
+				LogManager logManager = LogManager.getLogManager();
+				logManager.reset();
+				
+				// log file max size 10K, 3 rolling files, append-on-open
+				Handler fileHandler = new FileHandler("urmusic.err.log", 10000, 1, true);
+				fileHandler.setFormatter(new Formatter() {
+					public String format(LogRecord record) {
+						return record.getMessage() + System.lineSeparator();
+					}
+				});
+				Logger.getLogger("").addHandler(fileHandler);
+				
+				System.setErr(new PrintStream(new LoggingOutputStream(Logger.getLogger("stderr"), StdOutErrLevel.STDERR), true));
+				System.err.println("################################################################");
+				System.err.println("### " + Calendar.getInstance().getTime().toString());
+				System.err.println("################################################################");
 			} catch(Exception e) {
 				e.printStackTrace();
 			}
@@ -240,6 +265,7 @@ public class Urmusic extends Application {
 		
 		Menu viewMenu = new Menu("View");
 		Urmusic.motionBlurCheckboxItem = new CheckMenuItem("Motion blur");
+		Urmusic.motionBlurCheckboxItem.setDisable(true); // TODO: Motion blur crashes the thing
 		
 		Urmusic.motionBlurCheckboxItem.setOnAction((e) -> {
 			Urmusic.renderer.setMotionBlur(Urmusic.motionBlurCheckboxItem.isSelected());

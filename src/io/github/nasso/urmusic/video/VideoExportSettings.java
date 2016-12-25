@@ -13,5 +13,5 @@ public class VideoExportSettings {
 	
 	public double durationSec = 0.0;
 	
-	public boolean motionBlur = true;
+	public boolean motionBlur = false;
 }
