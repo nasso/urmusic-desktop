@@ -311,4 +311,9 @@ public class JFXSound implements Sound {
 		if(timeSeconds != Sound.CURRENT_TIME || !analyseTimer.isRunning()) this.computeData(timeSeconds);
 		this.getAnalysedData(dest);
 	}
+	
+	public void resetSmoothingBuffer() {
+		for(int i = 0, l = Urmusic.FFTSIZE; i < l; i++)
+			this.prevSmoothData[i] = this.lowPrevSmoothData[i] = this.highPrevSmoothData[i] = 0;
+	}
 }

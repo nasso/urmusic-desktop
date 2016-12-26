@@ -19,15 +19,6 @@ public class Renderer {
 	private Canvas cvs;
 	private GraphicsContext gtx;
 	
-	private float cwidth = 0;
-	private float cheight = 0;
-	
-	private float csize = 0;
-	private float glblscl = 0;
-	private float glowness = 0;
-	
-	private int dataCount = 32;
-	
 	private float[] freqData;
 	private float[] timeDomData;
 	
@@ -37,10 +28,18 @@ public class Renderer {
 	private DropShadow glowEffect = new DropShadow();
 	private MotionBlur motionEffect = new MotionBlur();
 	
-	private Section section;
-	
 	private FrameProperties frameProps;
 	private Settings settings;
+	
+	// Rendering globals
+	private float cwidth = 0;
+	private float cheight = 0;
+	private float csize = 0;
+	private float glowness = 0;
+	private float currentScaleX = 1;
+	private float currentScaleY = 1;
+	private int dataCount = 32;
+	private Section section;
 	
 	public Renderer() {
 	}
@@ -74,14 +73,28 @@ public class Renderer {
 			gtx.translate(this.cwidth / 2, this.cheight / 2);
 			gtx.scale(0.5, -0.5);
 			
-			this.glblscl = settings.globalScale.getValueAsFloat();
-			gtx.scale(this.glblscl, this.glblscl);
-			
-			gtx.translate(settings.globalOffsetX.getValueAsFloat() * this.csize, settings.globalOffsetY.getValueAsFloat() * this.csize);
-			gtx.rotate(settings.globalRotation.getValueAsFloat());
-			
-			for(int is = 0; is < settings.sections.size(); is++) {
-				this.section = settings.sections.get(is);
+			renderGroup(settings.rootGroup);
+		}
+		gtx.restore();
+	}
+	
+	private void renderGroup(SectionGroup group) {
+		float mem_scaleX = this.currentScaleX;
+		float mem_scaleY = this.currentScaleY;
+		
+		this.currentScaleX *= group.scaleX.getValueAsFloat();
+		this.currentScaleY *= group.scaleY.getValueAsFloat();
+		
+		gtx.scale(group.scaleX.getValueAsFloat(), group.scaleY.getValueAsFloat());
+		
+		gtx.translate(group.posX.getValueAsFloat() * this.csize, group.posY.getValueAsFloat() * this.csize);
+		gtx.rotate(group.rotation.getValueAsFloat());
+		
+		for(SectionGroupElement elem : group.getUnmodifiableChildren()) {
+			if(elem instanceof SectionGroup) {
+				renderGroup((SectionGroup) elem);
+			} else if(elem instanceof Section) {
+				this.section = (Section) elem;
 				
 				if(!section.visible || section.target == null) continue;
 				
@@ -122,7 +135,12 @@ public class Renderer {
 				gtx.restore();
 			}
 		}
-		gtx.restore();
+		
+		this.currentScaleX = mem_scaleX;
+		this.currentScaleY = mem_scaleY;
+		
+		// Set the temp section slot to null, this way it can be garbage collected
+		this.section = null;
 	}
 	
 	private float freqValue(float nind, FreqSection section) {
@@ -280,15 +298,16 @@ public class Renderer {
 		Effect finalEffect = null;
 		
 		if(this.glowness > 0.0f) {
-			glowEffect.setColor(section.color);
-			glowEffect.setRadius(this.glowness * this.glblscl);
+			glowEffect.setColor(this.section.color);
+			glowEffect.setWidth(this.glowness * this.currentScaleX);
+			glowEffect.setHeight(this.glowness * this.currentScaleY);
 			
 			finalEffect = glowEffect;
 		}
 		
 		if(this.motionBlur) {
-			float posX = (this.section.posX.getValueAsFloat() + this.settings.globalOffsetX.getValueAsFloat()) * this.csize * this.glblscl;
-			float posY = (this.section.posY.getValueAsFloat() + this.settings.globalOffsetY.getValueAsFloat()) * this.csize * this.glblscl;
+			float posX = 0; // (this.section.posX.getValueAsFloat() + this.settings.globalOffsetX.getValueAsFloat()) * this.csize * this.glblscl;
+			float posY = 0; // (this.section.posY.getValueAsFloat() + this.settings.globalOffsetY.getValueAsFloat()) * this.csize * this.glblscl;
 			
 			float[] lastPos;
 			if(this.lastPositions.containsKey(this.section)) {
@@ -321,13 +340,13 @@ public class Renderer {
 	}
 	
 	private void renderFreqSection() {
-		FreqSection sectarg = (FreqSection) section.target;
+		FreqSection sectarg = (FreqSection) this.section.target;
 		
 		this.dataCount = sectarg.dataCount.getValueAsInt();
 		DrawMode mode = sectarg.mode;
 		
-		gtx.setStroke(section.color);
-		gtx.setFill(section.color);
+		gtx.setStroke(this.section.color);
+		gtx.setFill(this.section.color);
 		gtx.setLineWidth((sectarg.lineWidth.getValueAsFloat() / 100f) * this.csize);
 		
 		setupEffect();
@@ -381,13 +400,13 @@ public class Renderer {
 	}
 	
 	private void renderTimeDomSection() {
-		TimeDomSection sectarg = (TimeDomSection) section.target;
+		TimeDomSection sectarg = (TimeDomSection) this.section.target;
 		
 		this.dataCount = sectarg.dataCount.getValueAsInt();
 		DrawMode mode = sectarg.mode;
 		
-		gtx.setStroke(section.color);
-		gtx.setFill(section.color);
+		gtx.setStroke(this.section.color);
+		gtx.setFill(this.section.color);
 		gtx.setLineWidth(sectarg.lineWidth.getValueAsFloat() / 100f * csize);
 		
 		setupEffect();
@@ -441,11 +460,11 @@ public class Renderer {
 	}
 	
 	private void renderImageSection() {
-		ImageSection sectarg = (ImageSection) section.target;
+		ImageSection sectarg = (ImageSection) this.section.target;
 		
 		gtx.setLineWidth((sectarg.borderSize.getValueAsFloat() / 100f) * this.csize);
 		
-		gtx.setFill(section.color);
+		gtx.setFill(this.section.color);
 		gtx.setStroke(sectarg.borderColor);
 		
 		setupEffect();
@@ -470,7 +489,7 @@ public class Renderer {
 	}
 	
 	private void renderTextSection() {
-		TextSection sectarg = (TextSection) section.target;
+		TextSection sectarg = (TextSection) this.section.target;
 		
 		Object otxt = sectarg.text.getValue();
 		String txt;
@@ -479,7 +498,7 @@ public class Renderer {
 		
 		setupEffect();
 		
-		gtx.setFill(section.color);
+		gtx.setFill(this.section.color);
 		gtx.setFont(Font.font(sectarg.fontFamily, FontWeight.findByName(sectarg.fontStyle), FontPosture.findByName(sectarg.fontStyle), sectarg.fontSize.getValueAsFloat() * csize));
 		gtx.setTextAlign(sectarg.textAlign);
 		gtx.setTextBaseline(sectarg.textBaseline);

@@ -11,7 +11,7 @@ import io.github.nasso.urmusic.ApplicationPreferences;
 import io.github.nasso.urmusic.video.VideoExportSettings;
 import io.github.nasso.urmusic.video.VideoStream;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.image.WritableImage;
+import javafx.scene.image.Image;
 
 public class FFmpegVideoStream implements VideoStream {
 	private Process p;
@@ -26,7 +26,7 @@ public class FFmpegVideoStream implements VideoStream {
 		// @format:off
 		ProcessBuilder pb = new ProcessBuilder(
 				ApplicationPreferences.ffmpegLocation, "-y",
-				"-f", "image2pipe", "-vcodec", "png", "-r", String.valueOf(settings.framerate),
+				"-f", "image2pipe", "-vcodec", "png", "-r", String.valueOf(settings.framerate), "-s", settings.width + "x" + settings.height,
 				"-i", "-",
 				"-t", String.valueOf(settings.durationSec),
 				"-i", settings.inputSoundFile,
@@ -43,7 +43,7 @@ public class FFmpegVideoStream implements VideoStream {
 		this.ffmpegInput = p.getOutputStream();
 	}
 	
-	public void writeImage(WritableImage img) throws IOException {
+	public void writeImage(Image img) throws IOException {
 		awtImg = SwingFXUtils.fromFXImage(img, awtImg);
 		ImageIO.write(awtImg, "png", this.ffmpegInput);
 	}
@@ -59,15 +59,5 @@ public class FFmpegVideoStream implements VideoStream {
 		}
 		
 		return true;
-	}
-	
-	public void cancel() throws IOException {
-		this.ffmpegInput.close();
-		
-		try {
-			this.p.waitFor();
-		} catch(InterruptedException e) {
-			e.printStackTrace();
-		}
 	}
 }

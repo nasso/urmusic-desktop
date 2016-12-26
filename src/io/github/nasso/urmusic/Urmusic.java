@@ -19,20 +19,19 @@ import io.github.nasso.urmusic.audio.Sound;
 import io.github.nasso.urmusic.core.FrameProperties;
 import io.github.nasso.urmusic.core.Renderer;
 import io.github.nasso.urmusic.expression.ExpressionEngine;
+import io.github.nasso.urmusic.json.JSONProjectLoader;
 import io.github.nasso.urmusic.log.LoggingOutputStream;
 import io.github.nasso.urmusic.log.StdOutErrLevel;
 import io.github.nasso.urmusic.ui.ThePlayer;
 import io.github.nasso.urmusic.ui.UrExportingVideoStatusPane;
 import io.github.nasso.urmusic.ui.UrLoadingPane;
 import io.github.nasso.urmusic.ui.UrVideoExportSettingsPane;
-import io.github.nasso.urmusic.video.VideoEngine;
 import io.github.nasso.urmusic.video.VideoExportSettings;
-import io.github.nasso.urmusic.video.VideoStream;
+import io.github.nasso.urmusic.video.VideoExportTask;
 import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
@@ -137,21 +136,19 @@ public class Urmusic extends Application {
 	
 	private static AnalyseData analyseData;
 	
+	private static long now_nano;
+	
 	// Vid stuff
-	// private static Task<Boolean> vidExportTask;
-	
-	private static VideoExportSettings vidSettings = null;
-	private static VideoStream vidStream = null;
-	
-	private static double currentAnalysedPosition = Sound.CURRENT_TIME;
-	private static double currentRenderedPosition = 0;
+	private static int currentAnalysedFrame = -1;
+	private static int currentRenderedFrame = 0;
 	private static double vidFrameLength = 0;
 	private static double audioAnalysisFrameLength = 1.0 / ApplicationPreferences.audioAnalysisFramerate;
-	private static WritableImage snapImg;
-	private static SnapshotParameters snapParams;
-	private static Canvas renderingCanvas;
-	
 	private static boolean requestVideoStop = false;
+	
+	private static VideoExportTask vidExportTask;
+	private static WritableImage snapImg;
+	private static SnapshotParameters snapParams = new SnapshotParameters();
+	private static Canvas renderingCanvas;
 	
 	// The app instance
 	private static Urmusic appInstance;
@@ -322,7 +319,7 @@ public class Urmusic extends Application {
 		Urmusic.exportingVidPane = new UrExportingVideoStatusPane();
 		Urmusic.exportingVidPane.layoutXProperty().bind(sce.widthProperty().divide(2).subtract(Urmusic.exportingVidPane.widthProperty().divide(2)));
 		Urmusic.exportingVidPane.layoutYProperty().bind(Urmusic.menuBar.heightProperty().add(Urmusic.tabPane.tabMaxHeightProperty()).add(9 + EXPORT_VID_PANES_OFFSET_TOP));
-		Urmusic.exportingVidPane.prefWidthProperty().bind(sce.widthProperty().multiply(0.7));
+		Urmusic.exportingVidPane.prefWidthProperty().bind(sce.widthProperty().multiply(0.8));
 		Urmusic.exportingVidPane.prefHeightProperty().bind(sce.heightProperty().subtract(Urmusic.exportingVidPane.layoutYProperty()).subtract(ThePlayer.PLAYER_HEIGHT + EXPORT_VID_PANES_OFFSET_BOTTOM));
 		Urmusic.exportingVidPane.setOnCancel(() -> {
 			Urmusic.requestVideoStop = true;
@@ -367,12 +364,8 @@ public class Urmusic extends Application {
 				p.dispose();
 			}
 			
-			if(Urmusic.vidStream != null) {
-				try {
-					Urmusic.vidStream.done();
-				} catch(IOException e1) {
-					e1.printStackTrace();
-				}
+			if(Urmusic.vidExportTask != null) {
+				Urmusic.vidExportTask.requestStop();
 			}
 			
 			try {
@@ -413,14 +406,11 @@ public class Urmusic extends Application {
 	
 	private static void recordVideoFrame(Project proj, float per) {
 		Urmusic.renderer.render(proj, renderingCanvas);
-		snapImg = renderingCanvas.snapshot(snapParams, snapImg);
-		try {
-			Urmusic.vidStream.writeImage(snapImg);
-		} catch(IOException e) {
-			e.printStackTrace();
-		}
 		
-		Urmusic.exportingVidPane.update(snapImg, per);
+		renderingCanvas.snapshot(Urmusic.snapParams, Urmusic.snapImg);
+		
+		Urmusic.vidExportTask.setNextImage(snapImg);
+		Urmusic.exportingVidPane.update(snapImg, per, Urmusic.now_nano);
 	}
 	
 	private static void analysePulse(Project proj) {
@@ -438,7 +428,7 @@ public class Urmusic extends Application {
 			Urmusic.thePlayer.getCurrentSound().setLowpassFreq(proj.getSettings().advanced.lowpassFreq);
 			Urmusic.thePlayer.getCurrentSound().setHighpassFreq(proj.getSettings().advanced.highpassFreq);
 			
-			Urmusic.thePlayer.getCurrentSound().getAnalysedData(Urmusic.analyseData, currentAnalysedPosition);
+			Urmusic.thePlayer.getCurrentSound().getAnalysedData(Urmusic.analyseData, currentAnalysedFrame * Urmusic.audioAnalysisFrameLength);
 			
 			props.maxval = Urmusic.analyseData.maxval;
 			props.minval = Urmusic.analyseData.minval;
@@ -454,16 +444,21 @@ public class Urmusic extends Application {
 	}
 	
 	private static void loop(long now) {
+		Urmusic.now_nano = now;
+		
 		int projI = Urmusic.tabPane.getSelectionModel().getSelectedIndex();
 		if(projI >= Urmusic.openedProjects.size()) return;
 		
 		Project proj = Urmusic.openedProjects.get(projI);
 		
 		Urmusic.thePlayer.refresh();
-		analysePulse(proj);
 		
 		// If recording...
-		if(Urmusic.vidStream != null) {
+		if(Urmusic.vidExportTask != null) {
+			if(!Urmusic.vidExportTask.needsANewImage()) return;
+			
+			analysePulse(proj);
+			
 			if(audioAnalysisFrameLength > vidFrameLength) {
 				// FIXME
 				// Here: time to next audio analysis frame > time to next video frame
@@ -471,14 +466,14 @@ public class Urmusic extends Application {
 				//
 				// Then, increment by the smallest time: VIDEO FRAME LENGTH
 				//
-				currentRenderedPosition += vidFrameLength;
+				currentRenderedFrame++;
 				
-				if(Math.floor(currentRenderedPosition / audioAnalysisFrameLength) >= Math.floor(currentAnalysedPosition / audioAnalysisFrameLength)) {
-					recordVideoFrame(proj, (float) (currentRenderedPosition / Urmusic.vidSettings.durationSec));
-					currentAnalysedPosition += audioAnalysisFrameLength;
+				if(Math.floor(currentRenderedFrame * Urmusic.vidFrameLength / audioAnalysisFrameLength) >= Math.floor(currentAnalysedFrame)) {
+					recordVideoFrame(proj, (float) (currentRenderedFrame * Urmusic.vidFrameLength / Urmusic.vidExportTask.vidSettings().durationSec));
+					currentAnalysedFrame++;
 				}
 				
-				requestVideoStop |= currentRenderedPosition >= Urmusic.vidSettings.durationSec;
+				requestVideoStop |= currentRenderedFrame * Urmusic.vidFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec;
 			} else if(vidFrameLength > audioAnalysisFrameLength) {
 				//
 				// Here: time to next video frame > time to next audio analysis frame
@@ -486,7 +481,7 @@ public class Urmusic extends Application {
 				//
 				// Then, increment by the smallest time: AUDIO FRAME LENGTH
 				//
-				currentAnalysedPosition += audioAnalysisFrameLength;
+				currentAnalysedFrame++;
 				
 				//
 				// > time / unit
@@ -497,12 +492,12 @@ public class Urmusic extends Application {
 				// 
 				// Here: convert the current analysed position and the current rendered position in full video frames, and check if the analyse is on the next frame
 				// 
-				if(Math.floor(currentAnalysedPosition / vidFrameLength) >= Math.floor(currentRenderedPosition / vidFrameLength)) {
-					recordVideoFrame(proj, (float) (currentAnalysedPosition / Urmusic.vidSettings.durationSec));
-					currentRenderedPosition += vidFrameLength;
+				if(Math.floor(currentAnalysedFrame * Urmusic.audioAnalysisFrameLength / vidFrameLength) >= Math.floor(currentRenderedFrame)) {
+					recordVideoFrame(proj, (float) (currentAnalysedFrame * Urmusic.vidFrameLength / Urmusic.vidExportTask.vidSettings().durationSec));
+					currentRenderedFrame++;
 				}
 				
-				requestVideoStop |= currentAnalysedPosition >= Urmusic.vidSettings.durationSec;
+				requestVideoStop |= currentAnalysedFrame * Urmusic.audioAnalysisFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec;
 			} else {
 				//
 				// Here: video and audio sync
@@ -510,31 +505,27 @@ public class Urmusic extends Application {
 				//
 				// Then, increment by the smallest time: BOTH
 				//
-				currentRenderedPosition += vidFrameLength;
-				currentAnalysedPosition += audioAnalysisFrameLength;
+				currentRenderedFrame++;
+				currentAnalysedFrame++;
 				
-				recordVideoFrame(proj, (float) (currentRenderedPosition / Urmusic.vidSettings.durationSec));
+				recordVideoFrame(proj, (float) (currentRenderedFrame * Urmusic.vidFrameLength / Urmusic.vidExportTask.vidSettings().durationSec));
 				
 				// Should be the same, but still.
-				requestVideoStop |= currentRenderedPosition >= Urmusic.vidSettings.durationSec || currentAnalysedPosition >= Urmusic.vidSettings.durationSec;
+				requestVideoStop |= currentRenderedFrame * Urmusic.vidFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec || currentAnalysedFrame * Urmusic.audioAnalysisFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec;
 			}
 			
-			if(requestVideoStop) {
-				try {
-					Urmusic.vidStream.done();
-				} catch(IOException e) {
-					e.printStackTrace();
-				}
-				
-				Urmusic.vidStream = null;
-				Urmusic.renderer.setMotionBlur(Urmusic.motionBlurCheckboxItem.isSelected());
-				Urmusic.currentAnalysedPosition = Sound.CURRENT_TIME;
-				Urmusic.currentRenderedPosition = Sound.CURRENT_TIME;
-				Urmusic.requestVideoStop = false;
+			if(Urmusic.requestVideoStop) {
 				Urmusic.exportingVidPane.finishExport();
+				Urmusic.loadPane.startLoading();
+				Urmusic.renderer.setMotionBlur(Urmusic.motionBlurCheckboxItem.isSelected());
+				Urmusic.currentAnalysedFrame = -1;
+				Urmusic.currentRenderedFrame = 0;
+				Urmusic.vidExportTask.requestStop();
+				Urmusic.vidExportTask = null;
 			}
 		} else {
 			// if not recording, render as usual
+			analysePulse(proj);
 			Urmusic.renderer.render(proj);
 		}
 	}
@@ -571,9 +562,7 @@ public class Urmusic extends Application {
 	private static Project loadProject(File f) throws IOException {
 		if(!f.isFile()) return null;
 		
-		String fileName = f.getName().substring(0, f.getName().lastIndexOf("."));
-		
-		Project p = new Project(fileName, Utils.readFile(f.getAbsolutePath(), false));
+		Project p = JSONProjectLoader.loadProject(f);
 		createProjectTab(p);
 		
 		return p;
@@ -648,38 +637,40 @@ public class Urmusic extends Application {
 	}
 	
 	private static void startVideoExport(VideoExportSettings s) {
-		Urmusic.vidSettings = s;
+		Urmusic.vidExportTask = null;
 		
 		try {
-			Urmusic.vidStream = VideoEngine.ENGINE.createStream(Urmusic.vidSettings);
+			Urmusic.vidExportTask = new VideoExportTask(s);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
 		
-		if(Urmusic.vidStream == null) {
-			System.err.println("Couldn't create Video Stream");
+		if(Urmusic.vidExportTask == null) {
+			System.err.println("Couldn't create the video stream");
 			return; // rip
 		}
-		currentAnalysedPosition = 0;
-		currentRenderedPosition = 0;
-		Urmusic.vidFrameLength = 1.0 / Urmusic.vidSettings.framerate;
+		
+		Urmusic.vidFrameLength = 1.0 / s.framerate;
 		
 		if(Urmusic.renderingCanvas == null) Urmusic.renderingCanvas = new Canvas();
-		Urmusic.renderingCanvas.setWidth(Urmusic.vidSettings.width);
-		Urmusic.renderingCanvas.setHeight(Urmusic.vidSettings.height);
+		Urmusic.renderingCanvas.setWidth(s.width);
+		Urmusic.renderingCanvas.setHeight(s.height);
 		
-		if(Urmusic.snapParams == null) Urmusic.snapParams = new SnapshotParameters();
-		Urmusic.snapParams.setViewport(new Rectangle2D(0, 0, Urmusic.vidSettings.width, Urmusic.vidSettings.height));
+		if(Urmusic.snapImg == null || Urmusic.snapImg.getWidth() != s.width || Urmusic.snapImg.getHeight() != s.height) Urmusic.snapImg = new WritableImage(s.width, s.height);
 		
-		Urmusic.renderer.setMotionBlur(Urmusic.vidSettings.motionBlur);
+		Urmusic.renderer.setMotionBlur(s.motionBlur);
 		
-		Urmusic.exportingVidPane.beginExport(Urmusic.vidSettings);
-		/*
-		Urmusic.vidExportTask = new Task<Boolean>() {
-			protected Boolean call() throws Exception {
-				return null;
-			}
-		};*/
+		Urmusic.thePlayer.getCurrentSound().resetSmoothingBuffer();
+		
+		Urmusic.requestVideoStop = false;
+		new Thread(() -> {
+			Urmusic.vidExportTask.run();
+			
+			Platform.runLater(() -> {
+				Urmusic.loadPane.stopLoading();
+			});
+		}).start();
+		Urmusic.exportingVidPane.beginExport(s, Urmusic.now_nano);
 	}
 	
 	public static void showError(String err) {

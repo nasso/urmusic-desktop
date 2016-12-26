@@ -2,12 +2,10 @@ package io.github.nasso.urmusic.video;
 
 import java.io.IOException;
 
-import javafx.scene.image.WritableImage;
+import javafx.scene.image.Image;
 
 public interface VideoStream {
-	public void writeImage(WritableImage img) throws IOException;
+	public void writeImage(Image img) throws IOException;
 	
 	public boolean done() throws IOException;
-	
-	public void cancel() throws IOException;
 }

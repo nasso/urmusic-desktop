@@ -31,6 +31,7 @@ public class UrExportingVideoStatusPane extends Pane {
 	};
 	
 	private Label exportProgressLabel;
+	private Label etaLabel;
 	private Label currentTimeLabel;
 	private Label durationLabel;
 	
@@ -50,10 +51,18 @@ public class UrExportingVideoStatusPane extends Pane {
 		this.setEffect(Urmusic.PANES_EFFECT);
 		
 		this.exportProgressLabel = new Label("Exporting nothing.");
-		this.exportProgressLabel.setLayoutY(16);
+		this.exportProgressLabel.setLayoutX(32);
+		this.exportProgressLabel.setLayoutY(18);
 		this.exportProgressLabel.setTextFill(Color.WHITE);
-		this.exportProgressLabel.setFont(Font.font(24.0));
-		this.exportProgressLabel.layoutXProperty().bind(this.widthProperty().divide(2).subtract(this.exportProgressLabel.widthProperty().divide(2)));
+		this.exportProgressLabel.setFont(Font.font(18.0));
+		this.exportProgressLabel.setAlignment(Pos.BASELINE_LEFT);
+		
+		this.etaLabel = new Label("ETA: a very long time");
+		this.etaLabel.layoutXProperty().bind(this.widthProperty().subtract(32).subtract(this.etaLabel.widthProperty()));
+		this.etaLabel.setLayoutY(18);
+		this.etaLabel.setTextFill(Color.WHITE);
+		this.etaLabel.setFont(Font.font(18.0));
+		this.etaLabel.setAlignment(Pos.BASELINE_RIGHT);
 		
 		this.cancelButton = new Button("Cancel");
 		this.cancelButton.setLayoutX(32);
@@ -94,6 +103,7 @@ public class UrExportingVideoStatusPane extends Pane {
 		
 		HBox hbox = new HBox();
 		hbox.setAlignment(Pos.TOP_CENTER);
+		hbox.setBackground(new Background(new BackgroundFill(Color.BLACK, null, null)));
 		hbox.setLayoutX(32);
 		hbox.layoutYProperty().bind(this.exportProgressLabel.heightProperty().add(32));
 		hbox.prefWidthProperty().bind(this.widthProperty().subtract(64));
@@ -105,22 +115,21 @@ public class UrExportingVideoStatusPane extends Pane {
 		
 		hbox.getChildren().add(this.preview);
 		
-		this.getChildren().addAll(this.exportProgressLabel, hbox, this.progressBarPane, this.currentTimeLabel, this.durationLabel, this.cancelButton);
+		this.getChildren().addAll(this.exportProgressLabel, this.etaLabel, hbox, this.progressBarPane, this.currentTimeLabel, this.durationLabel, this.cancelButton);
 		
 		this.setVisible(false);
 	}
 	
 	public void setOnCancel(Runnable r) {
-		Urmusic.removeTheModality();
-		this.setVisible(false);
 		this.onCancel = r;
 	}
 	
-	public void beginExport(VideoExportSettings settings) {
+	public void beginExport(VideoExportSettings settings, long now_nano) {
 		this.exportSettings = settings;
+		this.start_time_sec = now_nano / 1_000_000_000f;
 		
 		this.durationLabel.setText(Utils.prettyTime(this.exportSettings.durationSec, true));
-		this.update(null, 0.0f);
+		this.update(null, 0.0f, 0);
 		
 		Urmusic.bringTheModality();
 		this.setVisible(true);
@@ -131,7 +140,12 @@ public class UrExportingVideoStatusPane extends Pane {
 		this.setVisible(false);
 	}
 	
-	public void update(WritableImage img, float per) {
+	private float start_time_sec = 0;
+	
+	public void update(WritableImage img, float per, long now_nano) {
+		float now_sec = now_nano / 1_000_000_000f;
+		
+		this.etaLabel.setText("ETA: " + Utils.prettyTime((now_sec - start_time_sec) / per * (1.0 - per), false, true));
 		this.exportProgressLabel.setText("Exporting video... " + (Math.floor(per * 100000.0) / 1000.0) + "%");
 		this.currentTimeLabel.setText(Utils.prettyTime(per * this.exportSettings.durationSec, true));
 		this.progress.set(per);

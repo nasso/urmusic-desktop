@@ -49,6 +49,10 @@ public class GSONJSONObject implements JSONObject {
 		return this.gsonObj.get(key).getAsString();
 	}
 	
+	public boolean has(String key) {
+		return this.gsonObj.has(key);
+	}
+	
 	public void set(String key, JSONObject v) {
 		if(v instanceof GSONJSONObject) this.gsonObj.add(key, ((GSONJSONObject) v).gsonObj);
 	}

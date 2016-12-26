@@ -128,10 +128,11 @@ public class Utils {
 	}
 	
 	public static String prettyTime(double s, boolean withMillis) {
-		if(s == 0.0f) {
-			if(withMillis) return "0:00.000";
-			else return "0:00";
-		}
+		return prettyTime(s, withMillis, false);
+	}
+	
+	public static String prettyTime(double s, boolean withMillis, boolean abbr) {
+		if(s == 0.0f) return abbr ? "0min 0s" : (withMillis ? "0:00.000" : "0:00");
 		
 		int millis = (int) Math.floor((s % 60f) * 1000);
 		int seconds = (int) Math.floor(s % 60f);
@@ -151,8 +152,13 @@ public class Utils {
 			zeroSec += "." + zeroMilli;
 		}
 		
-		if(hours != 0) return hours + ":" + zeroMin + ":" + zeroSec;
-		else return minutes + ":" + zeroSec;
+		if(abbr) {
+			if(hours != 0) return hours + "h " + zeroMin + "min " + zeroSec + "s";
+			else return minutes + "min " + zeroSec + "s";
+		} else {
+			if(hours != 0) return hours + ":" + zeroMin + ":" + zeroSec;
+			else return minutes + ":" + zeroSec;
+		}
 	}
 	
 	private static HashMap<Integer, Float> randset = new HashMap<Integer, Float>();

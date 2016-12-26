@@ -13,6 +13,8 @@ public interface JSONObject {
 	
 	public String getString(String key);
 	
+	public boolean has(String key);
+	
 	public void set(String key, JSONObject v);
 	
 	public void set(String key, JSONArray v);

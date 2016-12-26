@@ -8,6 +8,8 @@ public class ExpressionProperty implements JSONSerializable {
 	private String expr;
 	private ExpressionGetter getter;
 	
+	private ExpressionProperty binding;
+	
 	public ExpressionProperty(ExpressionProperty prop) {
 		this(prop.expr);
 	}
@@ -18,6 +20,17 @@ public class ExpressionProperty implements JSONSerializable {
 	
 	public ExpressionProperty(String v) {
 		this.setExpr(v);
+	}
+	
+	public void bind(ExpressionProperty prop) {
+		if(!prop.searchFor(this)) this.binding = prop;
+	}
+	
+	private boolean searchFor(ExpressionProperty prop) {
+		if(this == prop) return true;
+		if(this.binding != null) return this.binding.searchFor(prop);
+		
+		return false;
 	}
 	
 	public void dispose() {
@@ -38,14 +51,20 @@ public class ExpressionProperty implements JSONSerializable {
 	}
 	
 	public Object getValue() {
+		if(this.binding != null) return this.binding.getValue();
+		
 		return this.getter.get();
 	}
 	
 	public float getValueAsFloat() {
+		if(this.binding != null) return this.binding.getValueAsFloat();
+		
 		return this.getter.getAsFloat();
 	}
 	
 	public int getValueAsInt() {
+		if(this.binding != null) return this.binding.getValueAsInt();
+		
 		return this.getter.getAsInt();
 	}
 	

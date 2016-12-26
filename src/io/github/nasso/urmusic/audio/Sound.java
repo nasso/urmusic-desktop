@@ -43,5 +43,7 @@ public interface Sound {
 	
 	public void setLowpassEnabled(boolean enabled);
 	
+	public void resetSmoothingBuffer();
+	
 	public void getAnalysedData(AnalyseData dest, double timeSeconds);
 }

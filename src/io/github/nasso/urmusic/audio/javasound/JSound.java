@@ -172,7 +172,7 @@ public class JSound implements Sound {
 	public float minhighval = -Float.MAX_VALUE;
 	
 	private synchronized void computeData(double seconds) {
-		if(seconds == Sound.CURRENT_TIME) seconds = this.getPosition();
+		if(seconds < 0) seconds = this.getPosition();
 		
 		// Position in the buffer
 		int bufferPos = Math.min(this.audioData.length - Urmusic.FFTSIZE, (int) (seconds / this.getDuration() * this.audioData.length) - Urmusic.FFTSIZE);
@@ -303,5 +303,10 @@ public class JSound implements Sound {
 	public void getAnalysedData(AnalyseData dest, double timeSeconds) {
 		if(timeSeconds != Sound.CURRENT_TIME || !analyseTimer.isRunning()) this.computeData(timeSeconds);
 		this.getAnalysedData(dest);
+	}
+	
+	public void resetSmoothingBuffer() {
+		for(int i = 0, l = Urmusic.FFTSIZE; i < l; i++)
+			this.prevSmoothData[i] = this.lowPrevSmoothData[i] = this.highPrevSmoothData[i] = 0;
 	}
 }

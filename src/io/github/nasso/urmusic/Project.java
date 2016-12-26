@@ -1,11 +1,13 @@
 package io.github.nasso.urmusic;
 
+import java.io.File;
+
 import io.github.nasso.urmusic.core.FrameProperties;
 import io.github.nasso.urmusic.core.Settings;
-import io.github.nasso.urmusic.json.JSONLoader;
 import javafx.scene.canvas.Canvas;
 
 public class Project {
+	private File projectFile;
 	private String name = "Untitled";
 	
 	private Settings settings;
@@ -13,17 +15,16 @@ public class Project {
 	private FrameProperties frameProps = new FrameProperties();
 	
 	public Project() {
-		this.settings = new Settings();
+		this("Untitled");
 	}
 	
 	public Project(String name) {
-		this.setName(name);
-		this.settings = new Settings();
+		this(name, new Settings());
 	}
 	
-	public Project(String name, String src) {
-		this.setName(name);
-		this.settings = JSONLoader.loadSettings(src);
+	public Project(String name, Settings s) {
+		this.name = name;
+		this.settings = s;
 	}
 	
 	public void dispose() {
@@ -60,5 +61,13 @@ public class Project {
 	
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	public File getProjectFile() {
+		return projectFile;
+	}
+	
+	public void setProjectFile(File projectFile) {
+		this.projectFile = projectFile;
 	}
 }

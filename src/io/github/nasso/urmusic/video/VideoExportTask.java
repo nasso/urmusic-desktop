@@ -1,41 +1,83 @@
 package io.github.nasso.urmusic.video;
 
-import io.github.nasso.urmusic.ApplicationPreferences;
-import io.github.nasso.urmusic.audio.Sound;
-import javafx.concurrent.Task;
+import java.io.IOException;
+
 import javafx.scene.image.Image;
 
-public class VideoExportTask extends Task<Boolean> {
+public class VideoExportTask {
 	private VideoExportSettings vidSettings = null;
 	private VideoStream vidStream = null;
 	
-	private double currentAnalysedPosition = Sound.CURRENT_TIME;
-	private double currentRenderedPosition = 0;
-	private double vidFrameLength = 0;
-	private double audioAnalysisFrameLength = 1.0 / ApplicationPreferences.audioAnalysisFramerate;
 	private Image snapImg;
 	
 	private boolean requestVideoStop = false;
 	private boolean needANewImage = true;
 	
-	protected Boolean call() throws Exception {
+	public VideoExportTask(VideoExportSettings s) throws Exception {
+		this.vidSettings = s;
 		
-		return true;
+		this.vidStream = VideoEngine.ENGINE.createStream(this.vidSettings);
 	}
 	
-	private void loop() {
-		if(this.snapImg != null) {
-			this.needANewImage = false;
-			
-			this.snapImg = null;
+	public VideoExportSettings vidSettings() {
+		return vidSettings;
+	}
+	
+	public void run() {
+		while(!requestVideoStop) {
+			loop();
+		}
+		
+		try {
+			this.vidStream.done();
+		} catch(IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
-	public void setNextImage(Image img) {
-		this.snapImg = img;
+	public synchronized void loop() {
+		if(this.snapImg == null) {
+			// Wait until snapImg is equal to something
+			try {
+				wait();
+			} catch(InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			// Maybe it has been canceled
+			if(requestVideoStop) return;
+		}
+		
+		this.needANewImage = false;
+		
+		try {
+			this.vidStream.writeImage(this.snapImg);
+			this.snapImg = null;
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+		
+		this.needANewImage = true;
+	}
+	
+	public synchronized void requestStop() {
+		requestVideoStop = true;
+		notifyAll();
+	}
+	
+	public synchronized void setNextImage(Image img) {
+		if(this.needANewImage) {
+			this.snapImg = img;
+			this.needANewImage = false;
+			notifyAll();
+		}
 	}
 	
 	public boolean needsANewImage() {
 		return needANewImage;
+	}
+	
+	public boolean hasFinished() {
+		return this.requestVideoStop;
 	}
 }
