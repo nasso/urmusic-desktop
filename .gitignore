@@ -4,6 +4,7 @@ ignore/*
 urmusic.pref
 builds/lib/*
 builds/presets/*
+builds/*
 
 *.war
 *.ear
