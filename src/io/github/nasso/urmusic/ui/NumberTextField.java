@@ -46,4 +46,8 @@ public class NumberTextField extends TextField {
 	public void setValue(double value) {
 		this.setText(String.valueOf(value));
 	}
+	
+	public void setValue(int value) {
+		this.setText(String.valueOf(value));
+	}
 }

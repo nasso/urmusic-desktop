@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -19,9 +20,11 @@ import io.github.nasso.urmusic.audio.Sound;
 import io.github.nasso.urmusic.core.FrameProperties;
 import io.github.nasso.urmusic.core.Renderer;
 import io.github.nasso.urmusic.expression.ExpressionEngine;
-import io.github.nasso.urmusic.json.JSONProjectLoader;
+import io.github.nasso.urmusic.json.JSONProjectCodec;
 import io.github.nasso.urmusic.log.LoggingOutputStream;
 import io.github.nasso.urmusic.log.StdOutErrLevel;
+import io.github.nasso.urmusic.ui.ProjectPane;
+import io.github.nasso.urmusic.ui.SizeDialog;
 import io.github.nasso.urmusic.ui.ThePlayer;
 import io.github.nasso.urmusic.ui.UrExportingVideoStatusPane;
 import io.github.nasso.urmusic.ui.UrLoadingPane;
@@ -64,9 +67,10 @@ import javafx.util.Duration;
 
 public class Urmusic extends Application {
 	public static final Background PANES_BACKGROUND = new Background(new BackgroundFill(Color.web("#111"), new CornerRadii(4), null));
+	public static final Background PANES_BACKGROUND_FLAT = new Background(new BackgroundFill(Color.web("#111"), null, null));
 	public static final Effect PANES_EFFECT = new DropShadow(16, Color.BLACK);
 	
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	public static final int FFTSIZE = 2048;
 	public static final int FFTSIZE_HALF = FFTSIZE / 2;
 	
@@ -75,7 +79,6 @@ public class Urmusic extends Application {
 	
 	public static final File APPLICATION_PREFERENCES_FILE = new File("urmusic.pref");
 	
-	@SuppressWarnings("resource")
 	public static void main(String[] argv) {
 		if(!DEBUG) {
 			try {
@@ -133,6 +136,7 @@ public class Urmusic extends Application {
 	private static FileChooser audioFileChooser = new FileChooser();
 	private static Alert aboutDialog;
 	private static Alert errorAlert;
+	private static SizeDialog sizeDialog;
 	
 	private static AnalyseData analyseData;
 	
@@ -141,8 +145,10 @@ public class Urmusic extends Application {
 	// Vid stuff
 	private static int currentAnalysedFrame = -1;
 	private static int currentRenderedFrame = 0;
+	private static int lastAnalysedFrame = currentAnalysedFrame - 1;
 	private static double vidFrameLength = 0;
 	private static double audioAnalysisFrameLength = 1.0 / ApplicationPreferences.audioAnalysisFramerate;
+	private static double exportingTime = 0.0;
 	private static boolean requestVideoStop = false;
 	
 	private static VideoExportTask vidExportTask;
@@ -175,6 +181,7 @@ public class Urmusic extends Application {
 		Urmusic.menuBar = new MenuBar();
 		Urmusic.thePlayer = new ThePlayer();
 		Urmusic.aboutDialog = new Alert(AlertType.INFORMATION);
+		Urmusic.sizeDialog = new SizeDialog("Size", 1280, 720);
 		
 		Urmusic.modalityPane.setBackground(new Background(new BackgroundFill(Color.BLACK, null, null)));
 		Urmusic.modalityPane.setOpacity(0.0);
@@ -291,7 +298,7 @@ public class Urmusic extends Application {
 		
 		Urmusic.tabPane.setLayoutY(30);
 		Urmusic.tabPane.prefWidthProperty().bind(sce.widthProperty());
-		Urmusic.tabPane.prefHeightProperty().bind(sce.heightProperty().subtract(30));
+		Urmusic.tabPane.prefHeightProperty().bind(sce.heightProperty().subtract(30).subtract(ThePlayer.PLAYER_HEIGHT));
 		
 		Urmusic.tabPane.setTabClosingPolicy(TabClosingPolicy.ALL_TABS);
 		
@@ -300,7 +307,7 @@ public class Urmusic extends Application {
 		Urmusic.tabPane.getTabs().add(addTabTab);
 		
 		// TODO: choose a default preset (or add an ApplicationPreference)
-		loadProject(new File("presets/drop-the-bassline.urm"));
+		loadProject(new File("presets/dubstepgutter.urm"));
 		addTabTab.setOnSelectionChanged((e) -> Urmusic.newProject());
 		
 		Urmusic.videoExportSettingsPane = new UrVideoExportSettingsPane();
@@ -386,18 +393,18 @@ public class Urmusic extends Application {
 			private long lastFrameTime = 0;
 			
 			public void handle(long now) {
-				if(now - lastFPSUpdate > 1_000_000_000) {
-					fps = frameCounter;
-					frameCounter = 0;
-					lastFPSUpdate = now;
+				if(now - this.lastFPSUpdate > 1_000_000_000) {
+					this.fps = this.frameCounter;
+					this.frameCounter = 0;
+					this.lastFPSUpdate = now;
 					
-					if(Urmusic.DEBUG) System.out.println("FPS: " + fps + " | Frame time: " + ((now - lastFrameTime) / 1_000_000.0) + "ms");
+					if(Urmusic.DEBUG) System.out.println("FPS: " + this.fps + " | Frame time: " + ((now - this.lastFrameTime) / 1_000_000.0) + "ms");
 				}
 				
 				Urmusic.loop(now);
 				
-				frameCounter++;
-				lastFrameTime = now;
+				this.frameCounter++;
+				this.lastFrameTime = now;
 			}
 		};
 		
@@ -417,8 +424,14 @@ public class Urmusic extends Application {
 		FrameProperties props = proj.getFrameProperties();
 		
 		if(Urmusic.thePlayer.getCurrentSound() != null) {
-			props.time = (float) Urmusic.thePlayer.getCurrentSound().getPosition();
-			props.duration = (float) Urmusic.thePlayer.getCurrentSound().getDuration();
+			if(Urmusic.vidExportTask != null) {
+				// Recording
+				props.duration = (float) Urmusic.thePlayer.getCurrentSound().getDuration();
+				props.time = (float) exportingTime;
+			} else {
+				props.time = (float) Urmusic.thePlayer.getCurrentSound().getPosition();
+				props.duration = (float) Urmusic.thePlayer.getCurrentSound().getDuration();
+			}
 			
 			Urmusic.thePlayer.getCurrentSound().setSmoothingTimeConstant(proj.getSettings().smoothingTimeConstant.getValueAsFloat());
 			Urmusic.thePlayer.getCurrentSound().setLowSmoothingTimeConstant(proj.getSettings().advanced.lowpassSmooth);
@@ -428,7 +441,10 @@ public class Urmusic extends Application {
 			Urmusic.thePlayer.getCurrentSound().setLowpassFreq(proj.getSettings().advanced.lowpassFreq);
 			Urmusic.thePlayer.getCurrentSound().setHighpassFreq(proj.getSettings().advanced.highpassFreq);
 			
-			Urmusic.thePlayer.getCurrentSound().getAnalysedData(Urmusic.analyseData, currentAnalysedFrame * Urmusic.audioAnalysisFrameLength);
+			if(Urmusic.vidExportTask == null || lastAnalysedFrame < currentAnalysedFrame) {
+				Urmusic.thePlayer.getCurrentSound().getAnalysedData(Urmusic.analyseData, currentAnalysedFrame * Urmusic.audioAnalysisFrameLength);
+				lastAnalysedFrame = currentAnalysedFrame;
+			}
 			
 			props.maxval = Urmusic.analyseData.maxval;
 			props.minval = Urmusic.analyseData.minval;
@@ -438,6 +454,9 @@ public class Urmusic extends Application {
 			
 			props.maxhighval = Urmusic.analyseData.maxhighval;
 			props.minhighval = Urmusic.analyseData.minhighval;
+			
+			props.prettytime = Utils.prettyTime(props.time);
+			props.prettyduration = Utils.prettyTime(props.duration);
 		}
 		
 		ExpressionEngine.ENGINE.update(props);
@@ -449,13 +468,14 @@ public class Urmusic extends Application {
 		int projI = Urmusic.tabPane.getSelectionModel().getSelectedIndex();
 		if(projI >= Urmusic.openedProjects.size()) return;
 		
+		ProjectPane pane = (ProjectPane) Urmusic.tabPane.getSelectionModel().getSelectedItem().getContent();
 		Project proj = Urmusic.openedProjects.get(projI);
 		
-		Urmusic.thePlayer.refresh();
+		thePlayer.refresh();
 		
 		// If recording...
-		if(Urmusic.vidExportTask != null) {
-			if(!Urmusic.vidExportTask.needsANewImage()) return;
+		if(vidExportTask != null) {
+			if(!vidExportTask.needsANewImage()) return;
 			
 			analysePulse(proj);
 			
@@ -467,13 +487,12 @@ public class Urmusic extends Application {
 				// Then, increment by the smallest time: VIDEO FRAME LENGTH
 				//
 				currentRenderedFrame++;
+				exportingTime = currentRenderedFrame * vidFrameLength;
 				
-				if(Math.floor(currentRenderedFrame * Urmusic.vidFrameLength / audioAnalysisFrameLength) >= Math.floor(currentAnalysedFrame)) {
-					recordVideoFrame(proj, (float) (currentRenderedFrame * Urmusic.vidFrameLength / Urmusic.vidExportTask.vidSettings().durationSec));
+				if(Math.floor(exportingTime / audioAnalysisFrameLength) >= currentAnalysedFrame) {
+					recordVideoFrame(proj, (float) (exportingTime / vidExportTask.vidSettings().durationSec));
 					currentAnalysedFrame++;
 				}
-				
-				requestVideoStop |= currentRenderedFrame * Urmusic.vidFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec;
 			} else if(vidFrameLength > audioAnalysisFrameLength) {
 				//
 				// Here: time to next video frame > time to next audio analysis frame
@@ -482,6 +501,7 @@ public class Urmusic extends Application {
 				// Then, increment by the smallest time: AUDIO FRAME LENGTH
 				//
 				currentAnalysedFrame++;
+				exportingTime = currentAnalysedFrame * audioAnalysisFrameLength;
 				
 				//
 				// > time / unit
@@ -492,12 +512,10 @@ public class Urmusic extends Application {
 				// 
 				// Here: convert the current analysed position and the current rendered position in full video frames, and check if the analyse is on the next frame
 				// 
-				if(Math.floor(currentAnalysedFrame * Urmusic.audioAnalysisFrameLength / vidFrameLength) >= Math.floor(currentRenderedFrame)) {
-					recordVideoFrame(proj, (float) (currentAnalysedFrame * Urmusic.vidFrameLength / Urmusic.vidExportTask.vidSettings().durationSec));
+				if(Math.floor(exportingTime / vidFrameLength) >= currentRenderedFrame) {
+					recordVideoFrame(proj, (float) (exportingTime / vidExportTask.vidSettings().durationSec));
 					currentRenderedFrame++;
 				}
-				
-				requestVideoStop |= currentAnalysedFrame * Urmusic.audioAnalysisFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec;
 			} else {
 				//
 				// Here: video and audio sync
@@ -507,26 +525,29 @@ public class Urmusic extends Application {
 				//
 				currentRenderedFrame++;
 				currentAnalysedFrame++;
+				exportingTime = currentRenderedFrame * vidFrameLength;
 				
-				recordVideoFrame(proj, (float) (currentRenderedFrame * Urmusic.vidFrameLength / Urmusic.vidExportTask.vidSettings().durationSec));
-				
-				// Should be the same, but still.
-				requestVideoStop |= currentRenderedFrame * Urmusic.vidFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec || currentAnalysedFrame * Urmusic.audioAnalysisFrameLength >= Urmusic.vidExportTask.vidSettings().durationSec;
+				recordVideoFrame(proj, (float) (exportingTime / vidExportTask.vidSettings().durationSec));
 			}
 			
-			if(Urmusic.requestVideoStop) {
-				Urmusic.exportingVidPane.finishExport();
-				Urmusic.loadPane.startLoading();
-				Urmusic.renderer.setMotionBlur(Urmusic.motionBlurCheckboxItem.isSelected());
-				Urmusic.currentAnalysedFrame = -1;
-				Urmusic.currentRenderedFrame = 0;
-				Urmusic.vidExportTask.requestStop();
-				Urmusic.vidExportTask = null;
+			requestVideoStop |= exportingTime >= vidExportTask.vidSettings().durationSec;
+			
+			if(requestVideoStop) {
+				exportingVidPane.finishExport();
+				loadPane.startLoading();
+				renderer.setMotionBlur(Urmusic.motionBlurCheckboxItem.isSelected());
+				currentAnalysedFrame = -1;
+				currentRenderedFrame = 0;
+				lastAnalysedFrame = currentAnalysedFrame - 1;
+				vidExportTask.requestStop();
+				vidExportTask = null;
+				exportingTime = 0;
+				thePlayer.getCurrentSound().startAnalysis(ApplicationPreferences.audioAnalysisFramerate);
 			}
 		} else {
 			// if not recording, render as usual
 			analysePulse(proj);
-			Urmusic.renderer.render(proj);
+			renderer.render(proj, pane.getCanvas());
 		}
 	}
 	
@@ -545,14 +566,14 @@ public class Urmusic extends Application {
 		
 		Urmusic.openedProjects.add(p);
 		
-		p.getCanvas().widthProperty().bind(Urmusic.tabPane.widthProperty());
-		p.getCanvas().heightProperty().bind(Urmusic.tabPane.heightProperty().subtract(Urmusic.tabPane.tabMaxHeightProperty()));
-		
-		Tab tab = new Tab(p.getName());
-		tab.setContent(p.getCanvas());
+		Tab tab = new Tab(p.name);
+		tab.setContent(new ProjectPane(p));
 		tab.setOnCloseRequest((e) -> {
 			p.dispose();
 			Urmusic.openedProjects.remove(p);
+		});
+		p.setOnNameChanged(() -> {
+			tab.setText(p.name);
 		});
 		
 		Urmusic.tabPane.getTabs().add(i, tab);
@@ -562,8 +583,8 @@ public class Urmusic extends Application {
 	private static Project loadProject(File f) throws IOException {
 		if(!f.isFile()) return null;
 		
-		Project p = JSONProjectLoader.loadProject(f);
-		createProjectTab(p);
+		Project p = JSONProjectCodec.loadProject(f);
+		if(p != null) createProjectTab(p);
 		
 		return p;
 	}
@@ -584,6 +605,13 @@ public class Urmusic extends Application {
 		t.start();
 	}
 	
+	private static Project getCurrentTabProject() {
+		int projI = Urmusic.tabPane.getSelectionModel().getSelectedIndex();
+		if(projI >= Urmusic.openedProjects.size()) return null;
+		
+		return Urmusic.openedProjects.get(projI);
+	}
+	
 	private static void openSound() {
 		File f = Urmusic.audioFileChooser.showOpenDialog(Urmusic.stg);
 		
@@ -593,7 +621,14 @@ public class Urmusic extends Application {
 	}
 	
 	private static void newProject() {
-		createProjectTab(new Project());
+		Optional<int[]> size = Urmusic.sizeDialog.showAndWait();
+		
+		if(size.isPresent()) {
+			int[] isize = size.get();
+			createProjectTab(new Project(isize[0], isize[1]));
+		} else {
+			tabPane.getSelectionModel().selectPrevious();
+		}
 	}
 	
 	private static void openProject() {
@@ -610,12 +645,30 @@ public class Urmusic extends Application {
 		}
 	}
 	
+	private static void saveProject(Project proj) {
+		if(proj == null) return;
+		
+		JSONProjectCodec.saveProject(proj);
+	}
+	
+	private static void saveProjectAs(Project proj) {
+		File f = Urmusic.fileChooser.showSaveDialog(Urmusic.stg);
+		if(f != null) proj.setProjectFile(f);
+		else return;
+		
+		saveProject(proj);
+	}
+	
 	private static void saveProject() {
-		// TODO: saveProject()
+		Project proj = getCurrentTabProject();
+		if(proj == null) return;
+		
+		if(proj.getProjectFile() == null) saveProjectAs(proj);
+		else saveProject(proj);
 	}
 	
 	private static void saveProjectAs() {
-		// TODO: saveProjectAs()
+		saveProjectAs(getCurrentTabProject());
 	}
 	
 	private static void openWiki() {
@@ -637,40 +690,48 @@ public class Urmusic extends Application {
 	}
 	
 	private static void startVideoExport(VideoExportSettings s) {
-		Urmusic.vidExportTask = null;
+		Project proj = getCurrentTabProject();
+		if(proj == null) return;
+		
+		s.width = proj.getSettings().framewidth;
+		s.height = proj.getSettings().frameheight;
+		
+		vidExportTask = null;
 		
 		try {
-			Urmusic.vidExportTask = new VideoExportTask(s);
+			vidExportTask = new VideoExportTask(s);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
 		
-		if(Urmusic.vidExportTask == null) {
+		if(vidExportTask == null) {
 			System.err.println("Couldn't create the video stream");
 			return; // rip
 		}
 		
-		Urmusic.vidFrameLength = 1.0 / s.framerate;
+		vidFrameLength = 1.0 / s.framerate;
+		lastAnalysedFrame = currentAnalysedFrame - 1;
 		
-		if(Urmusic.renderingCanvas == null) Urmusic.renderingCanvas = new Canvas();
-		Urmusic.renderingCanvas.setWidth(s.width);
-		Urmusic.renderingCanvas.setHeight(s.height);
+		if(renderingCanvas == null) renderingCanvas = new Canvas();
+		renderingCanvas.setWidth(s.width);
+		renderingCanvas.setHeight(s.height);
 		
-		if(Urmusic.snapImg == null || Urmusic.snapImg.getWidth() != s.width || Urmusic.snapImg.getHeight() != s.height) Urmusic.snapImg = new WritableImage(s.width, s.height);
+		if(snapImg == null || snapImg.getWidth() != s.width || snapImg.getHeight() != s.height) snapImg = new WritableImage(s.width, s.height);
 		
-		Urmusic.renderer.setMotionBlur(s.motionBlur);
+		renderer.setMotionBlur(s.motionBlur);
 		
-		Urmusic.thePlayer.getCurrentSound().resetSmoothingBuffer();
+		thePlayer.getCurrentSound().resetSmoothingBuffer();
+		thePlayer.getCurrentSound().stopAnalysis();
 		
-		Urmusic.requestVideoStop = false;
+		requestVideoStop = false;
 		new Thread(() -> {
-			Urmusic.vidExportTask.run();
+			vidExportTask.run();
 			
 			Platform.runLater(() -> {
-				Urmusic.loadPane.stopLoading();
+				loadPane.stopLoading();
 			});
 		}).start();
-		Urmusic.exportingVidPane.beginExport(s, Urmusic.now_nano);
+		exportingVidPane.beginExport(s, now_nano);
 	}
 	
 	public static void showError(String err) {
@@ -678,6 +739,10 @@ public class Urmusic extends Application {
 			Urmusic.errorAlert.setContentText(err);
 			Urmusic.errorAlert.show();
 		});
+	}
+	
+	public static Optional<int[]> showSizeDialog() {
+		return Urmusic.sizeDialog.showAndWait();
 	}
 	
 	public static void bringTheModality() {

@@ -72,6 +72,10 @@ public class ExpressionProperty implements JSONSerializable {
 		this.getter.refresh(props);
 	}
 	
+	public String toString() {
+		return this.expr;
+	}
+	
 	public Object toJSON(JSONEngine e) {
 		return this.expr;
 	}

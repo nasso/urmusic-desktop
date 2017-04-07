@@ -20,10 +20,9 @@ public class ApplicationPreferences {
 	
 	public static boolean playSoundOnLoad = false;
 	
+	public static double treePanelSize = 200;
 	public static double audioVolume = 0.8;
 	public static double audioAnalysisFramerate = 60;
-	
-	public static long maxAudioBufferSize = 1073741824; // 1GB in bytes
 	
 	public static void load(File file) throws IOException {
 		if(!file.exists()) return;
@@ -50,10 +49,9 @@ public class ApplicationPreferences {
 		
 		playSoundOnLoad = Boolean.parseBoolean(values.getOrDefault("playSoundOnLoad", "false"));
 		
+		treePanelSize = Double.parseDouble(values.getOrDefault("treePanelSize", "300"));
 		audioVolume = Double.parseDouble(values.getOrDefault("audioVolume", "0.8"));
 		audioAnalysisFramerate = Double.parseDouble(values.getOrDefault("audioAnalysisFramerate", "60"));
-		
-		maxAudioBufferSize = Long.parseLong(values.getOrDefault("maxAudioBufferSize", "1073741824"));
 	}
 	
 	public static void save(File file) throws IOException {

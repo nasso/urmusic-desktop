@@ -29,7 +29,7 @@ public class NashornExpressionGetter implements ExpressionGetter {
 		
 		if(o instanceof Number) return ((Number) o).floatValue();
 		
-		return 0.123456f;
+		return 0.0f;
 	}
 	
 	public int getAsInt() {

@@ -21,15 +21,28 @@ public abstract class SectionGroupElement {
 		
 	}
 	
+	public SectionGroupElement(SectionGroupElement other) {
+		this.name = other.name + " - Clone";
+		this.visible = other.visible;
+		this.opacity.setExpr(other.opacity.getExpr());
+		this.posX.setExpr(other.posX.getExpr());
+		this.posY.setExpr(other.posY.getExpr());
+		this.rotation.setExpr(other.rotation.getExpr());
+		this.scaleX.setExpr(other.scaleX.getExpr());
+		this.scaleY.setExpr(other.scaleY.getExpr());
+	}
+	
 	public SectionGroupElement(PrimitiveProperties props) {
-		this.name = props.getString("name", this.name);
-		this.visible = props.getBool("visible", true);
-		this.opacity.setExpr(props.getString("opacity", "1.0"));
-		this.posX.setExpr(props.getString("posX", "0.0"));
-		this.posY.setExpr(props.getString("posY", "0.0"));
-		this.rotation.setExpr(props.getString("rotation", "0.0"));
-		this.scaleX.setExpr(props.getString("scaleX", "1.0"));
-		this.scaleY.setExpr(props.getString("scaleY", "1.0"));
+		if(props != null) {
+			this.name = props.getString("name", this.name);
+			this.visible = props.getBool("visible", true);
+			this.opacity.setExpr(props.getString("opacity", "1.0"));
+			this.posX.setExpr(props.getString("posX", "0.0"));
+			this.posY.setExpr(props.getString("posY", "0.0"));
+			this.rotation.setExpr(props.getString("rotation", "0.0"));
+			this.scaleX.setExpr(props.getString("scaleX", "1.0"));
+			this.scaleY.setExpr(props.getString("scaleY", "1.0"));
+		}
 	}
 	
 	public void refreshProperties(FrameProperties props) {
@@ -70,5 +83,9 @@ public abstract class SectionGroupElement {
 		this.rotation.dispose();
 		this.scaleX.dispose();
 		this.scaleY.dispose();
+	}
+	
+	public String toString() {
+		return this.name;
 	}
 }

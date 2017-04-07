@@ -1,3 +1,4 @@
+
 .context-menu {
 	-fx-background-color: #222;
 	-fx-border-color: #444;
@@ -54,4 +55,77 @@
         rgba(0,0,0,0.08),
         linear-gradient(#333, #222),
         linear-gradient(#1b1b1b 0%, #202020 100%);
+}
+
+.tree-table-view * {
+	-fx-text-fill: #fff;
+}
+
+.tree-table-view, .tree-table-view .column-header-background {
+	-fx-background-color: #111;
+	-fx-color: #222;
+}
+
+.tree-table-view .arrow {
+	-fx-background-color: #fff;
+	-fx-translate-y: 2px;
+}
+
+.tree-table-view .cell {
+	-fx-background-color: #282828;
+	-fx-text-fill: #fff;
+}
+
+.tree-table-view .cell .text-field, .tree-table-view .cell .combo-box {
+	-fx-background-color: #282828;
+	-fx-text-fill: #fff;
+	-fx-background-insets: 0px;
+	-fx-padding: 0px;
+	-fx-margin: 0px;
+	-fx-background-radius: 0px;
+	-fx-prompt-text-fill: rgba(255, 255, 255, 0.5);
+}
+
+.tree-table-view .cell:odd .text-field, .tree-table-view .cell:odd .combo-box {
+	-fx-background-color: #323232;
+}
+
+.tree-table-view .cell:odd {
+	-fx-background-color: #323232;
+}
+
+.colValue {
+	-fx-background: #222;
+}
+
+.combo-box {
+	-fx-background-color: #222;
+	-fx-background-insets: 0px;
+	-fx-background-radius: 2px;
+	-fx-text-fill: #fff;
+}
+
+.combo-box * {
+	-fx-background-color: #222;
+	-fx-text-fill: #fff;
+}
+
+.combo-box .list-cell:even {
+	-fx-background-color: #222;
+}
+
+.combo-box .list-cell:odd {
+	-fx-background-color: #222;
+}
+
+.context-menu * {
+	-fx-text-fill: #fff;
+}
+
+.scroll-bar * {
+	-fx-background-color: #111;
+}
+
+.scroll-bar .thumb {
+	-fx-background-color: #222;
 }

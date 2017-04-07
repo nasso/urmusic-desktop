@@ -9,16 +9,33 @@ public class Section extends SectionGroupElement {
 	public ExpressionProperty glowness = new ExpressionProperty("0.0");
 	public SectionTarget target = null;
 	
+	public Section() {
+		this(null, null);
+	}
+	
+	public Section(Section other) {
+		super(other);
+		
+		this.type = other.type;
+		this.color = other.color;
+		this.glowness.setExpr(other.glowness.getExpr());
+		this.updateType();
+		
+		this.target.set(other.target);
+	}
+	
 	public Section(PrimitiveProperties props, PrimitiveProperties targetProps) {
 		super(props);
 		
-		this.type = SectionType.valueOf(props.getString("type", "FREQ").toUpperCase());
-		this.color = Color.web(props.getString("color", "#ffffff"));
-		this.glowness.setExpr(props.getString("glowness", "0.0"));
+		if(props != null) {
+			this.type = SectionType.valueOf(props.getString("type", "FREQ").toUpperCase());
+			this.color = Color.web(props.getString("color", "#ffffff"));
+			this.glowness.setExpr(props.getString("glowness", "0.0"));
+		}
 		
 		this.updateType();
 		
-		if(this.target != null) {
+		if(this.target != null && targetProps != null) {
 			this.target.set(targetProps);
 		}
 	}

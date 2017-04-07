@@ -5,6 +5,7 @@ urmusic.pref
 builds/lib/*
 builds/presets/*
 builds/*
+/urmusic.pref
 
 *.war
 *.ear
@@ -13,3 +14,4 @@ builds/*
 .project
 
 hs_err_pid*
+/bin/

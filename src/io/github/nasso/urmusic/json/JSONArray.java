@@ -13,6 +13,16 @@ public interface JSONArray {
 	
 	public int getLength();
 	
+	public void add(JSONObject v);
+	
+	public void add(JSONArray v);
+	
+	public void add(boolean v);
+	
+	public void add(float v);
+	
+	public void add(String v);
+	
 	public void set(int i, JSONObject v);
 	
 	public void set(int i, JSONArray v);

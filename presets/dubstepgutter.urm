@@ -1,5 +1,25 @@
 {
+	"version": "V1_1",
+	"name": "DubstepGutter",
+	"width": 1280,
+	"height": 720,
+	
 	"smoothingTimeConstant": "0.25",
+	
+	"globalScale": "max(clamp((maxlowval + 70) / 50, 0, 1) * 2.5, 1.2)",
+	"globalOffsetX": "0.005 * (rand() * 2 - 1) * clamp((maxlowval + 70) / 50, 0, 1)",
+	"globalOffsetY": "0.005 * (rand() * 2 - 1) * clamp((maxlowval + 70) / 50, 0, 1)",
+	"globalRotation": "0",
+	"backgroundColor": "#3b3b3b",
+	"advanced": {
+		"enableLowpass": true,
+		"enableHighpass": false,
+		"lowpassFreq": 40,
+		"highpassFreq": 480,
+		"lowpassSmooth": 0.6,
+		"highpassSmooth": 0.6
+	},
+	
 	"sections": [
 		{
 			"name": "Background",
@@ -177,18 +197,5 @@
 				"image": {}
 			}
 		}
-	],
-	"globalScale": "max(clamp((maxlowval + 70) / 50, 0, 1) * 2.5, 1.2)",
-	"globalOffsetX": "0.005 * (rand() * 2 - 1) * clamp((maxlowval + 70) / 50, 0, 1)",
-	"globalOffsetY": "0.005 * (rand() * 2 - 1) * clamp((maxlowval + 70) / 50, 0, 1)",
-	"globalRotation": "0",
-	"backgroundColor": "#3b3b3b",
-	"advanced": {
-		"enableLowpass": true,
-		"enableHighpass": false,
-		"lowpassFreq": 40,
-		"highpassFreq": 480,
-		"lowpassSmooth": 0.6,
-		"highpassSmooth": 0.6
-	}
+	]
 }

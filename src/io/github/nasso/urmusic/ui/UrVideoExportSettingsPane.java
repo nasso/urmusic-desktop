@@ -16,7 +16,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -34,8 +33,6 @@ public class UrVideoExportSettingsPane extends Pane {
 	private TextField outputFileField;
 	private NumberTextField constantRateFactorField;
 	private NumberTextField audioSampleRateField;
-	private NumberTextField widthField;
-	private NumberTextField heightField;
 	private NumberTextField framerateField;
 	private NumberTextField durationField;
 	private CheckBox motionBlurField;
@@ -55,11 +52,6 @@ public class UrVideoExportSettingsPane extends Pane {
 		this.titleLabel.setTextFill(Color.WHITE);
 		this.titleLabel.setFont(Font.font(24.0));
 		this.titleLabel.layoutXProperty().bind(this.widthProperty().divide(2).subtract(this.titleLabel.widthProperty().divide(2)));
-		
-		ColumnConstraints col0Constr = new ColumnConstraints();
-		col0Constr.setPercentWidth(50);
-		ColumnConstraints col1Constr = new ColumnConstraints();
-		col1Constr.setPercentWidth(50);
 		
 		this.vbox = new VBox();
 		this.vbox.setAlignment(Pos.TOP_CENTER);
@@ -82,7 +74,7 @@ public class UrVideoExportSettingsPane extends Pane {
 		this.exportButton.layoutXProperty().bind(this.widthProperty().subtract(16).subtract(this.exportButton.widthProperty()));
 		this.exportButton.layoutYProperty().bind(this.heightProperty().subtract(10).subtract(this.exportButton.heightProperty()));
 		this.exportButton.setOnAction((e) -> {
-			if(!checkFields()) return;
+			if(!this.checkFields()) return;
 			
 			Urmusic.removeTheModality();
 			this.setVisible(false);
@@ -104,14 +96,6 @@ public class UrVideoExportSettingsPane extends Pane {
 			this.settings.audioSampleRate = v;
 			if(Urmusic.DEBUG) System.out.println("Audio sample rate: " + v);
 		}, "The audio sample rate. Default to 48k");
-		this.widthField = this.addIntField("Width", this.settings.width, 1, Integer.MAX_VALUE, (v) -> {
-			this.settings.width = v;
-			if(Urmusic.DEBUG) System.out.println("Width: " + v);
-		}, "The video width.");
-		this.heightField = this.addIntField("Height", this.settings.height, 1, Integer.MAX_VALUE, (v) -> {
-			this.settings.height = v;
-			if(Urmusic.DEBUG) System.out.println("Height: " + v);
-		}, "The video height.");
 		this.framerateField = this.addDoubleField("Framerate", this.settings.framerate, 1, 60, (v) -> {
 			this.settings.framerate = v;
 			if(Urmusic.DEBUG) System.out.println("Framerate: " + v);
@@ -123,28 +107,24 @@ public class UrVideoExportSettingsPane extends Pane {
 		this.motionBlurField = this.addBooleanField("Motion blur", this.settings.motionBlur, (v) -> {
 			this.settings.motionBlur = v;
 			if(Urmusic.DEBUG) System.out.println("Motion blur: " + v);
-		}, "If enabled, there'll be motion blur. It's looks cool.");
+		}, "If enabled, there'll be motion blur. It looks cool.");
 		this.motionBlurField.setDisable(true); // TODO: Enable motion blur when it'll be fixed
 		
 		this.setVisible(false);
 	}
 	
 	private boolean checkFields() {
-		this.settings.outputFile = outputFileField.getText();
-		this.settings.constantRateFactor = Integer.parseInt(constantRateFactorField.getText());
-		this.settings.audioSampleRate = Integer.parseInt(audioSampleRateField.getText());
-		this.settings.width = Integer.parseInt(widthField.getText());
-		this.settings.height = Integer.parseInt(heightField.getText());
-		this.settings.framerate = Double.parseDouble(framerateField.getText());
-		this.settings.durationSec = Double.parseDouble(durationField.getText());
-		this.settings.motionBlur = motionBlurField.isSelected();
+		this.settings.outputFile = this.outputFileField.getText();
+		this.settings.constantRateFactor = Integer.parseInt(this.constantRateFactorField.getText());
+		this.settings.audioSampleRate = Integer.parseInt(this.audioSampleRateField.getText());
+		this.settings.framerate = Double.parseDouble(this.framerateField.getText());
+		this.settings.durationSec = Double.parseDouble(this.durationField.getText());
+		this.settings.motionBlur = this.motionBlurField.isSelected();
 		
 		if(Urmusic.DEBUG) {
 			System.out.println("outputFile: " + this.settings.outputFile);
 			System.out.println("constantRateFactor: " + this.settings.constantRateFactor);
 			System.out.println("audioSampleRate: " + this.settings.audioSampleRate);
-			System.out.println("width: " + this.settings.width);
-			System.out.println("height: " + this.settings.height);
 			System.out.println("framerate: " + this.settings.framerate);
 			System.out.println("duration: " + this.settings.durationSec);
 		}

@@ -11,12 +11,29 @@ public class SectionGroup extends SectionGroupElement {
 		super(props);
 	}
 	
+	public SectionGroup(SectionGroup other) {
+		super(other);
+		
+		for(SectionGroupElement e : other.sectionList) {
+			if(e instanceof SectionGroup) {
+				this.addChild(new SectionGroup((SectionGroup) e));
+			} else if(e instanceof Section) {
+				this.addChild(new Section((Section) e));
+			}
+		}
+	}
+	
 	public SectionGroup() {
 		
 	}
 	
-	public SectionGroupElement addChildren(SectionGroupElement e) {
+	public SectionGroupElement addChild(SectionGroupElement e) {
 		if(e != this && !(e instanceof SectionGroup && ((SectionGroup) e).contains(this))) this.sectionList.add(e);
+		return e;
+	}
+	
+	public SectionGroupElement addChild(int index, SectionGroupElement e) {
+		if(e != this && !(e instanceof SectionGroup && ((SectionGroup) e).contains(this))) this.sectionList.add(index, e);
 		return e;
 	}
 	
@@ -27,7 +44,7 @@ public class SectionGroup extends SectionGroupElement {
 	public boolean contains(SectionGroupElement el) {
 		if(this.sectionList.contains(el)) return true;
 		
-		for(SectionGroupElement e : sectionList) {
+		for(SectionGroupElement e : this.sectionList) {
 			if(e instanceof SectionGroup && ((SectionGroup) e).contains(el)) return true;
 		}
 		
@@ -37,7 +54,7 @@ public class SectionGroup extends SectionGroupElement {
 	public void dispose() {
 		super.dispose();
 		
-		for(SectionGroupElement e : sectionList) {
+		for(SectionGroupElement e : this.sectionList) {
 			e.dispose();
 		}
 	}
@@ -46,37 +63,8 @@ public class SectionGroup extends SectionGroupElement {
 		this.sectionList.clear();
 	}
 	
-	public SectionGroupElement removeChildren(SectionGroupElement e) {
+	public SectionGroupElement removeChild(SectionGroupElement e) {
 		this.sectionList.remove(e);
 		return e;
-	}
-	
-	private void generateDescription(StringBuilder builder, int tabs) {
-		builder.append("+ " + this.getClass().getSimpleName() + ": \"" + this.name + "\"\n");
-		
-		String prefix = new String(new char[tabs + 1]).replace("\0", "|\t"); // prefix
-																				// =
-																				// rep("|\t",
-																				// tabs
-																				// +
-																				// 1)
-		for(SectionGroupElement elem : this.sectionList) {
-			builder.append(prefix + "|\n" + prefix);
-			
-			if(elem instanceof SectionGroup) {
-				((SectionGroup) elem).generateDescription(builder, tabs + 1);
-			} else {
-				builder.append("+ " + elem.getClass().getSimpleName() + ": \"" + elem.name + "\"\n");
-			}
-		}
-	}
-	
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		
-		this.generateDescription(builder, 0);
-		builder.append("o"); // Final "o" (makes it prettier :D)
-		
-		return builder.toString();
 	}
 }

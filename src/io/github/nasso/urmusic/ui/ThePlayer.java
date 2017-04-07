@@ -3,17 +3,18 @@ package io.github.nasso.urmusic.ui;
 import java.util.function.Consumer;
 
 import io.github.nasso.urmusic.ApplicationPreferences;
+import io.github.nasso.urmusic.Urmusic;
 import io.github.nasso.urmusic.Utils;
 import io.github.nasso.urmusic.audio.Sound;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
@@ -62,7 +63,8 @@ public class ThePlayer extends Pane {
 	};
 	
 	public ThePlayer() {
-		this.setBackground(new Background(new BackgroundFill(Color.web("#111"), CornerRadii.EMPTY, Insets.EMPTY)));
+		this.setBackground(Urmusic.PANES_BACKGROUND_FLAT);
+		this.setBorder(new Border(new BorderStroke(Color.web("#222"), null, null, null, BorderStrokeStyle.SOLID, null, null, null, null, new BorderWidths(1, 0, 0, 0), null)));
 		this.setPrefHeight(PLAYER_HEIGHT);
 		
 		Pane playPauseBtnPane = new Pane();

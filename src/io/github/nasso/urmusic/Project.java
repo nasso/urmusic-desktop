@@ -4,25 +4,26 @@ import java.io.File;
 
 import io.github.nasso.urmusic.core.FrameProperties;
 import io.github.nasso.urmusic.core.Settings;
-import javafx.scene.canvas.Canvas;
 
 public class Project {
 	private File projectFile;
-	private String name = "Untitled";
+	public String name = "Untitled";
 	
 	private Settings settings;
-	private Canvas cvs = new Canvas();
 	private FrameProperties frameProps = new FrameProperties();
 	
-	public Project() {
-		this("Untitled");
+	private Runnable onnamechanged;
+	
+	public Project(int w, int h) {
+		this("Untitled", w, h);
 	}
 	
-	public Project(String name) {
-		this(name, new Settings());
+	public Project(String name, int w, int h) {
+		this(null, name, new Settings(w, h));
 	}
 	
-	public Project(String name, Settings s) {
+	public Project(File file, String name, Settings s) {
+		this.projectFile = file;
 		this.name = name;
 		this.settings = s;
 	}
@@ -32,7 +33,7 @@ public class Project {
 	}
 	
 	public FrameProperties getFrameProperties() {
-		return frameProps;
+		return this.frameProps;
 	}
 	
 	public void setFrameProperties(FrameProperties frameProps) {
@@ -40,34 +41,26 @@ public class Project {
 	}
 	
 	public Settings getSettings() {
-		return settings;
+		return this.settings;
 	}
 	
 	public void setSettings(Settings settings) {
 		this.settings = settings;
 	}
 	
-	public Canvas getCanvas() {
-		return cvs;
-	}
-	
-	public void setCanvas(Canvas cvs) {
-		this.cvs = cvs;
-	}
-	
-	public String getName() {
-		return name;
-	}
-	
-	public void setName(String name) {
-		this.name = name;
-	}
-	
 	public File getProjectFile() {
-		return projectFile;
+		return this.projectFile;
 	}
 	
 	public void setProjectFile(File projectFile) {
 		this.projectFile = projectFile;
+	}
+
+	public Runnable getOnNameChanged() {
+		return onnamechanged;
+	}
+
+	public void setOnNameChanged(Runnable onnamechanged) {
+		this.onnamechanged = onnamechanged;
 	}
 }

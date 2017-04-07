@@ -57,6 +57,27 @@ public abstract class AnalyserSection implements SectionTarget {
 		this.smartFill = p.getBool("smartFill", false);
 	}
 	
+	public void set(SectionTarget other) {
+		if(!(other instanceof AnalyserSection)) return;
+		
+		AnalyserSection as = (AnalyserSection) other;
+		this.dataCount.setExpr(as.dataCount.getExpr());
+		this.lineWidth.setExpr(as.lineWidth.getExpr());
+		this.lineCap = as.lineCap;
+		this.startX.setExpr(as.startX.getExpr());
+		this.endX.setExpr(as.endX.getExpr());
+		this.offsetY.setExpr(as.offsetY.getExpr());
+		this.exponent.setExpr(as.exponent.getExpr());
+		this.height.setExpr(as.height.getExpr());
+		this.mode = as.mode;
+		this.polar.setExpr(as.polar.getExpr());
+		this.clampShapeToZero = as.clampShapeToZero;
+		this.closeShape = as.closeShape;
+		this.drawLast = as.drawLast;
+		this.quadratic = as.quadratic;
+		this.smartFill = as.smartFill;
+	}
+	
 	public void refreshOwnProperties(FrameProperties props) {
 		this.dataCount.refresh(props);
 		this.lineWidth.refresh(props);

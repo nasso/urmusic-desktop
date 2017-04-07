@@ -71,6 +71,26 @@ public class GSONJSONArray implements JSONArray {
 		this.gsonArr.set(i, new JsonPrimitive(v));
 	}
 	
+	public void add(JSONObject v) {
+		if(v instanceof GSONJSONObject) this.gsonArr.add(((GSONJSONObject) v).gsonObj);
+	}
+	
+	public void add(JSONArray v) {
+		if(v instanceof GSONJSONArray) this.gsonArr.add(((GSONJSONArray) v).gsonArr);
+	}
+	
+	public void add(boolean v) {
+		this.gsonArr.add(new JsonPrimitive(v));
+	}
+	
+	public void add(float v) {
+		this.gsonArr.add(new JsonPrimitive(v));
+	}
+	
+	public void add(String v) {
+		this.gsonArr.add(new JsonPrimitive(v));
+	}
+	
 	public String toString() {
 		return this.gsonArr.toString();
 	}

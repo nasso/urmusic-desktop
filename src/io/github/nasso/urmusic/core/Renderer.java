@@ -44,11 +44,10 @@ public class Renderer {
 	public Renderer() {
 	}
 	
-	public void render(Project proj) {
-		this.render(proj, proj.getCanvas());
-	}
-	
 	public void render(Project proj, Canvas targetCvs) {
+		if(targetCvs.getWidth() != proj.getSettings().framewidth) targetCvs.setWidth(proj.getSettings().framewidth);
+		if(targetCvs.getHeight() != proj.getSettings().frameheight) targetCvs.setHeight(proj.getSettings().frameheight);
+		
 		this.freqData = Urmusic.getFrequencyData();
 		this.timeDomData = Urmusic.getTimeDomData();
 		
@@ -58,83 +57,88 @@ public class Renderer {
 		this.frameProps = proj.getFrameProperties();
 		this.settings = proj.getSettings();
 		
-		this.cwidth = (float) cvs.getWidth();
-		this.cheight = (float) cvs.getHeight();
+		this.cwidth = (float) this.cvs.getWidth();
+		this.cheight = (float) this.cvs.getHeight();
 		
 		this.csize = Math.min(this.cwidth, this.cheight);
 		
-		gtx.clearRect(0, 0, this.cwidth, this.cheight);
+		this.gtx.clearRect(0, 0, this.cwidth, this.cheight);
 		
-		gtx.setFill(settings.backgroundColor);
-		gtx.fillRect(0, 0, this.cwidth, this.cheight);
+		this.gtx.setFill(this.settings.backgroundColor);
+		this.gtx.fillRect(0, 0, this.cwidth, this.cheight);
 		
-		gtx.save();
+		this.gtx.save();
 		{
-			gtx.translate(this.cwidth / 2, this.cheight / 2);
-			gtx.scale(0.5, -0.5);
+			this.gtx.translate(this.cwidth / 2, this.cheight / 2);
+			this.gtx.scale(0.5, -0.5);
 			
-			renderGroup(settings.rootGroup);
+			this.renderGroup(this.settings.rootGroup);
 		}
-		gtx.restore();
+		this.gtx.restore();
 	}
 	
 	private void renderGroup(SectionGroup group) {
+		if(!group.visible) return;
+		
 		float mem_scaleX = this.currentScaleX;
 		float mem_scaleY = this.currentScaleY;
 		
 		this.currentScaleX *= group.scaleX.getValueAsFloat();
 		this.currentScaleY *= group.scaleY.getValueAsFloat();
 		
-		gtx.scale(group.scaleX.getValueAsFloat(), group.scaleY.getValueAsFloat());
-		
-		gtx.translate(group.posX.getValueAsFloat() * this.csize, group.posY.getValueAsFloat() * this.csize);
-		gtx.rotate(group.rotation.getValueAsFloat());
-		
-		for(SectionGroupElement elem : group.getUnmodifiableChildren()) {
-			if(elem instanceof SectionGroup) {
-				renderGroup((SectionGroup) elem);
-			} else if(elem instanceof Section) {
-				this.section = (Section) elem;
-				
-				if(!section.visible || section.target == null) continue;
-				
-				if(section.type != SectionType.IMAGE) {
-					frameProps.imgw = frameProps.imgh = frameProps.imgr = 0;
-				} else {
-					ImageSection target = (ImageSection) section.target;
+		this.gtx.save();
+		{
+			this.gtx.translate(group.posX.getValueAsFloat() * this.csize, group.posY.getValueAsFloat() * this.csize);
+			this.gtx.rotate(group.rotation.getValueAsFloat());
+			this.gtx.scale(group.scaleX.getValueAsFloat(), group.scaleY.getValueAsFloat());
+			
+			for(SectionGroupElement elem : group.getUnmodifiableChildren()) {
+				if(elem instanceof SectionGroup) {
+					this.renderGroup((SectionGroup) elem);
+				} else if(elem instanceof Section) {
+					this.section = (Section) elem;
 					
-					if(target.image != null) {
-						frameProps.imgw = (float) target.image.getWidth();
-						frameProps.imgh = (float) target.image.getHeight();
-						frameProps.imgr = frameProps.imgw / frameProps.imgh;
+					if(!this.section.visible || this.section.target == null) continue;
+					
+					if(this.section.type != SectionType.IMAGE) {
+						this.frameProps.imgw = this.frameProps.imgh = this.frameProps.imgr = 0;
+					} else {
+						ImageSection target = (ImageSection) this.section.target;
 						
-						section.refreshProperties(frameProps);
+						if(target.image != null) {
+							this.frameProps.imgw = (float) target.image.getWidth();
+							this.frameProps.imgh = (float) target.image.getHeight();
+							this.frameProps.imgr = this.frameProps.imgw / this.frameProps.imgh;
+							
+							this.section.refreshProperties(this.frameProps);
+						}
 					}
-				}
-				
-				this.glowness = section.glowness.getValueAsFloat();
-				
-				gtx.save();
-				{
-					gtx.translate(section.posX.getValueAsFloat() * this.csize, section.posY.getValueAsFloat() * this.csize);
-					gtx.rotate(section.rotation.getValueAsFloat());
-					gtx.scale(section.scaleX.getValueAsFloat(), section.scaleY.getValueAsFloat());
 					
-					gtx.setGlobalAlpha(section.opacity.getValueAsFloat());
+					this.glowness = this.section.glowness.getValueAsFloat();
 					
-					if(section.type == SectionType.FREQ) {
-						renderFreqSection();
-					} else if(section.type == SectionType.TIME_DOM) {
-						renderTimeDomSection();
-					} else if(section.type == SectionType.IMAGE) {
-						renderImageSection();
-					} else if(section.type == SectionType.TEXT) {
-						renderTextSection();
+					this.gtx.save();
+					{
+						this.gtx.translate(this.section.posX.getValueAsFloat() * this.csize, this.section.posY.getValueAsFloat() * this.csize);
+						this.gtx.rotate(this.section.rotation.getValueAsFloat());
+						this.gtx.scale(this.section.scaleX.getValueAsFloat(), this.section.scaleY.getValueAsFloat());
+						
+						this.gtx.setGlobalAlpha(this.section.opacity.getValueAsFloat());
+						
+						if(this.section.type == SectionType.FREQ) {
+							this.renderFreqSection();
+						} else if(this.section.type == SectionType.TIME_DOM) {
+							this.renderTimeDomSection();
+						} else if(this.section.type == SectionType.IMAGE) {
+							this.renderImageSection();
+						} else if(this.section.type == SectionType.TEXT) {
+							this.renderTextSection();
+						}
 					}
+					this.gtx.restore();
 				}
-				gtx.restore();
 			}
 		}
+		this.gtx.restore();
 		
 		this.currentScaleX = mem_scaleX;
 		this.currentScaleY = mem_scaleY;
@@ -150,8 +154,8 @@ public class Renderer {
 		// @format:off
 		float val = Math.max(
 			Utils.getValue(
-				freqData,
-				Utils.lerp(section.freqStart.getValueAsFloat(), section.freqEnd.getValueAsFloat(), nind) * freqData.length,
+				this.freqData,
+				Utils.lerp(section.freqStart.getValueAsFloat(), section.freqEnd.getValueAsFloat(), nind) * this.freqData.length,
 				section.quadratic,
 				minDec) - minDec,
 			0) / (maxDec - minDec);
@@ -175,21 +179,21 @@ public class Renderer {
 			float xp = cosx * y;
 			float yp = sinx * y;
 			
-			x = Utils.lerp(x * csize, xp * csize, polar);
-			y = Utils.lerp(y * csize, yp * csize, polar);
+			x = Utils.lerp(x * this.csize, xp * this.csize, polar);
+			y = Utils.lerp(y * this.csize, yp * this.csize, polar);
 		} else {
-			x *= csize;
-			y *= csize;
+			x *= this.csize;
+			y *= this.csize;
 		}
 		
-		sectionPerProps[0] = x;
-		sectionPerProps[1] = y;
+		this.sectionPerProps[0] = x;
+		this.sectionPerProps[1] = y;
 		
-		return sectionPerProps;
+		return this.sectionPerProps;
 	}
 	
 	private float[] getProps(FreqSection section, float per) {
-		float height = (float) (Math.pow(freqValue(per, section), section.exponent.getValueAsFloat()) * section.height.getValueAsFloat());
+		float height = (float) (Math.pow(this.freqValue(per, section), section.exponent.getValueAsFloat()) * section.height.getValueAsFloat());
 		
 		float x = Utils.lerp(section.startX.getValueAsFloat(), section.endX.getValueAsFloat(), per);
 		float y = section.offsetY.getValueAsFloat();
@@ -207,23 +211,23 @@ public class Renderer {
 			float exp = cosx * ey;
 			float eyp = sinx * ey;
 			
-			x = Utils.lerp(x * csize, xp * csize, polar);
-			y = Utils.lerp(y * csize, yp * csize, polar);
-			ex = Utils.lerp(ex * csize, exp * csize, polar);
-			ey = Utils.lerp(ey * csize, eyp * csize, polar);
+			x = Utils.lerp(x * this.csize, xp * this.csize, polar);
+			y = Utils.lerp(y * this.csize, yp * this.csize, polar);
+			ex = Utils.lerp(ex * this.csize, exp * this.csize, polar);
+			ey = Utils.lerp(ey * this.csize, eyp * this.csize, polar);
 		} else {
-			x *= csize;
-			y *= csize;
-			ex *= csize;
-			ey *= csize;
+			x *= this.csize;
+			y *= this.csize;
+			ex *= this.csize;
+			ey *= this.csize;
 		}
 		
-		sectionPerProps[0] = x;
-		sectionPerProps[1] = y;
-		sectionPerProps[2] = ex;
-		sectionPerProps[3] = ey;
+		this.sectionPerProps[0] = x;
+		this.sectionPerProps[1] = y;
+		this.sectionPerProps[2] = ex;
+		this.sectionPerProps[3] = ey;
 		
-		return sectionPerProps;
+		return this.sectionPerProps;
 	}
 	
 	private float[] getTimeFootProps(TimeDomSection section, float per) {
@@ -238,21 +242,21 @@ public class Renderer {
 			float xp = cosx * y;
 			float yp = sinx * y;
 			
-			x = Utils.lerp(x * csize, xp * csize, polar);
-			y = Utils.lerp(y * csize, yp * csize, polar);
+			x = Utils.lerp(x * this.csize, xp * this.csize, polar);
+			y = Utils.lerp(y * this.csize, yp * this.csize, polar);
 		} else {
-			x *= csize;
-			y *= csize;
+			x *= this.csize;
+			y *= this.csize;
 		}
 		
-		sectionPerProps[0] = x;
-		sectionPerProps[1] = y;
+		this.sectionPerProps[0] = x;
+		this.sectionPerProps[1] = y;
 		
-		return sectionPerProps;
+		return this.sectionPerProps;
 	}
 	
 	private float[] getTimeProps(TimeDomSection section, float per) {
-		float height = Utils.getValue(timeDomData, per * timeDomData.length, section.quadratic, 0);
+		float height = Utils.getValue(this.timeDomData, per * this.timeDomData.length, section.quadratic, 0);
 		
 		float powered = (float) Math.abs(Math.pow(height, section.exponent.getValueAsFloat()));
 		height = (height >= 0 ? powered : -powered) * section.height.getValueAsFloat();
@@ -273,23 +277,23 @@ public class Renderer {
 			float exp = cosx * ey;
 			float eyp = sinx * ey;
 			
-			x = Utils.lerp(x * csize, xp * csize, polar);
-			y = Utils.lerp(y * csize, yp * csize, polar);
-			ex = Utils.lerp(ex * csize, exp * csize, polar);
-			ey = Utils.lerp(ey * csize, eyp * csize, polar);
+			x = Utils.lerp(x * this.csize, xp * this.csize, polar);
+			y = Utils.lerp(y * this.csize, yp * this.csize, polar);
+			ex = Utils.lerp(ex * this.csize, exp * this.csize, polar);
+			ey = Utils.lerp(ey * this.csize, eyp * this.csize, polar);
 		} else {
-			x *= csize;
-			y *= csize;
-			ex *= csize;
-			ey *= csize;
+			x *= this.csize;
+			y *= this.csize;
+			ex *= this.csize;
+			ey *= this.csize;
 		}
 		
-		sectionPerProps[0] = x;
-		sectionPerProps[1] = y;
-		sectionPerProps[2] = ex;
-		sectionPerProps[3] = ey;
+		this.sectionPerProps[0] = x;
+		this.sectionPerProps[1] = y;
+		this.sectionPerProps[2] = ex;
+		this.sectionPerProps[3] = ey;
 		
-		return sectionPerProps;
+		return this.sectionPerProps;
 	}
 	
 	private Map<Section, float[]> lastPositions = new HashMap<Section, float[]>();
@@ -298,11 +302,11 @@ public class Renderer {
 		Effect finalEffect = null;
 		
 		if(this.glowness > 0.0f) {
-			glowEffect.setColor(this.section.color);
-			glowEffect.setWidth(this.glowness * this.currentScaleX);
-			glowEffect.setHeight(this.glowness * this.currentScaleY);
+			this.glowEffect.setColor(this.section.color);
+			this.glowEffect.setWidth(this.glowness * this.currentScaleX);
+			this.glowEffect.setHeight(this.glowness * this.currentScaleY);
 			
-			finalEffect = glowEffect;
+			finalEffect = this.glowEffect;
 		}
 		
 		if(this.motionBlur) {
@@ -336,7 +340,7 @@ public class Renderer {
 			}
 		}
 		
-		gtx.setEffect(finalEffect);
+		this.gtx.setEffect(finalEffect);
 	}
 	
 	private void renderFreqSection() {
@@ -345,57 +349,57 @@ public class Renderer {
 		this.dataCount = sectarg.dataCount.getValueAsInt();
 		DrawMode mode = sectarg.mode;
 		
-		gtx.setStroke(this.section.color);
-		gtx.setFill(this.section.color);
-		gtx.setLineWidth((sectarg.lineWidth.getValueAsFloat() / 100f) * this.csize);
+		this.gtx.setStroke(this.section.color);
+		this.gtx.setFill(this.section.color);
+		this.gtx.setLineWidth((sectarg.lineWidth.getValueAsFloat() / 100f) * this.csize);
 		
-		setupEffect();
+		this.setupEffect();
 		
-		gtx.setLineCap(sectarg.lineCap);
+		this.gtx.setLineCap(sectarg.lineCap);
 		
-		gtx.beginPath();
-		for(int i = 0; i < dataCount; i++) {
-			if(!sectarg.drawLast && i == dataCount - 1) {
+		this.gtx.beginPath();
+		for(int i = 0; i < this.dataCount; i++) {
+			if(!sectarg.drawLast && i == this.dataCount - 1) {
 				break;
 			}
 			
-			float per = i / (dataCount - 1.0f);
+			float per = i / (this.dataCount - 1.0f);
 			
-			float[] p = getProps(sectarg, per);
+			float[] p = this.getProps(sectarg, per);
 			
 			if(mode == DrawMode.LINES || (i == 0 && sectarg.clampShapeToZero)) {
-				gtx.moveTo(p[0], p[1]);
+				this.gtx.moveTo(p[0], p[1]);
 			}
 			
-			gtx.lineTo(p[2], p[3]);
+			this.gtx.lineTo(p[2], p[3]);
 			
-			if(i == dataCount - 1 && sectarg.clampShapeToZero) {
-				gtx.lineTo(p[0], p[1]);
+			if(i == this.dataCount - 1 && sectarg.clampShapeToZero) {
+				this.gtx.lineTo(p[0], p[1]);
 			}
 		}
 		
 		if(sectarg.closeShape && mode != DrawMode.FILL) {
-			gtx.closePath();
+			this.gtx.closePath();
 		}
 		
 		if(mode == DrawMode.FILL) {
 			if(sectarg.smartFill) {
-				for(float i = dataCount - 1; i >= 0; i--) {
-					if(!sectarg.drawLast && i == dataCount - 1) {
+				for(float i = this.dataCount - 1; i >= 0; i--) {
+					if(!sectarg.drawLast && i == this.dataCount - 1) {
 						continue;
 					}
 					
-					float per = i / (dataCount - 1);
-					float[] fp = getFootProps(sectarg, per);
+					float per = i / (this.dataCount - 1);
+					float[] fp = this.getFootProps(sectarg, per);
 					
-					gtx.lineTo(fp[0], fp[1]);
+					this.gtx.lineTo(fp[0], fp[1]);
 				}
 			}
 			
-			gtx.fill();
+			this.gtx.fill();
 		} else {
-			gtx.moveTo(0, 0);
-			gtx.stroke();
+			this.gtx.moveTo(0, 0);
+			this.gtx.stroke();
 		}
 	}
 	
@@ -405,86 +409,86 @@ public class Renderer {
 		this.dataCount = sectarg.dataCount.getValueAsInt();
 		DrawMode mode = sectarg.mode;
 		
-		gtx.setStroke(this.section.color);
-		gtx.setFill(this.section.color);
-		gtx.setLineWidth(sectarg.lineWidth.getValueAsFloat() / 100f * csize);
+		this.gtx.setStroke(this.section.color);
+		this.gtx.setFill(this.section.color);
+		this.gtx.setLineWidth(sectarg.lineWidth.getValueAsFloat() / 100f * this.csize);
 		
-		setupEffect();
+		this.setupEffect();
 		
-		gtx.setLineCap(sectarg.lineCap);
-		gtx.setLineJoin(sectarg.lineJoin);
+		this.gtx.setLineCap(sectarg.lineCap);
+		this.gtx.setLineJoin(sectarg.lineJoin);
 		
-		gtx.beginPath();
-		for(int i = 0; i < dataCount; i++) {
-			if(!sectarg.drawLast && i == dataCount - 1) {
+		this.gtx.beginPath();
+		for(int i = 0; i < this.dataCount; i++) {
+			if(!sectarg.drawLast && i == this.dataCount - 1) {
 				break;
 			}
 			
-			float per = i / (dataCount - 1.0f);
-			float[] p = getTimeProps(sectarg, per);
+			float per = i / (this.dataCount - 1.0f);
+			float[] p = this.getTimeProps(sectarg, per);
 			
 			if(mode == DrawMode.LINES || (i == 0 && sectarg.clampShapeToZero)) {
-				gtx.moveTo(p[0], p[1]);
+				this.gtx.moveTo(p[0], p[1]);
 			}
 			
-			gtx.lineTo(p[2], p[3]);
+			this.gtx.lineTo(p[2], p[3]);
 			
-			if(i == dataCount - 1 && sectarg.clampShapeToZero) {
-				gtx.lineTo(p[0], p[1]);
+			if(i == this.dataCount - 1 && sectarg.clampShapeToZero) {
+				this.gtx.lineTo(p[0], p[1]);
 			}
 		}
 		
 		if(sectarg.closeShape && mode != DrawMode.FILL) {
-			gtx.closePath();
+			this.gtx.closePath();
 		}
 		
 		if(mode == DrawMode.FILL) {
 			if(sectarg.smartFill) {
-				for(int i = dataCount - 1; i >= 0; i--) {
-					if(!sectarg.drawLast && i == dataCount - 1) {
+				for(int i = this.dataCount - 1; i >= 0; i--) {
+					if(!sectarg.drawLast && i == this.dataCount - 1) {
 						continue;
 					}
 					
-					float per = i / (dataCount - 1.0f);
-					float[] fp = getTimeFootProps(sectarg, per);
+					float per = i / (this.dataCount - 1.0f);
+					float[] fp = this.getTimeFootProps(sectarg, per);
 					
-					gtx.lineTo(fp[0], fp[1]);
+					this.gtx.lineTo(fp[0], fp[1]);
 				}
 			}
 			
-			gtx.fill();
+			this.gtx.fill();
 		} else {
-			gtx.moveTo(0, 0);
-			gtx.stroke();
+			this.gtx.moveTo(0, 0);
+			this.gtx.stroke();
 		}
 	}
 	
 	private void renderImageSection() {
 		ImageSection sectarg = (ImageSection) this.section.target;
 		
-		gtx.setLineWidth((sectarg.borderSize.getValueAsFloat() / 100f) * this.csize);
+		this.gtx.setLineWidth((sectarg.borderSize.getValueAsFloat() / 100f) * this.csize);
 		
-		gtx.setFill(this.section.color);
-		gtx.setStroke(sectarg.borderColor);
+		this.gtx.setFill(this.section.color);
+		this.gtx.setStroke(sectarg.borderColor);
 		
-		setupEffect();
+		this.setupEffect();
 		
-		gtx.scale(1, -1);
+		this.gtx.scale(1, -1);
 		
 		float imgBorderRad = sectarg.imageBorderRadius.getValueAsFloat() * this.csize;
 		if(imgBorderRad != 0.0f) {
-			Utils.roundRect(gtx, -this.csize / 2f, -this.csize / 2f, this.csize, this.csize, imgBorderRad);
-			gtx.clip();
+			Utils.roundRect(this.gtx, -this.csize / 2f, -this.csize / 2f, this.csize, this.csize, imgBorderRad);
+			this.gtx.clip();
 		} else {
-			gtx.beginPath();
-			gtx.rect(-this.csize / 2f, -this.csize / 2f, this.csize, this.csize);
+			this.gtx.beginPath();
+			this.gtx.rect(-this.csize / 2f, -this.csize / 2f, this.csize, this.csize);
 		}
 		
-		if(sectarg.opaque) gtx.fill();
-		if(sectarg.borderVisible) gtx.stroke();
+		if(sectarg.opaque) this.gtx.fill();
+		if(sectarg.borderVisible) this.gtx.stroke();
 		
 		if(sectarg.image != null) {
-			gtx.drawImage(sectarg.image, -this.csize / 2f, -this.csize / 2f, this.csize, this.csize);
+			this.gtx.drawImage(sectarg.image, -this.csize / 2f, -this.csize / 2f, this.csize, this.csize);
 		}
 	}
 	
@@ -496,16 +500,16 @@ public class Renderer {
 		
 		if(otxt == null || "".equals(txt = otxt.toString())) return;
 		
-		setupEffect();
+		this.setupEffect();
 		
-		gtx.setFill(this.section.color);
-		gtx.setFont(Font.font(sectarg.fontFamily, FontWeight.findByName(sectarg.fontStyle), FontPosture.findByName(sectarg.fontStyle), sectarg.fontSize.getValueAsFloat() * csize));
-		gtx.setTextAlign(sectarg.textAlign);
-		gtx.setTextBaseline(sectarg.textBaseline);
+		this.gtx.setFill(this.section.color);
+		this.gtx.setFont(Font.font(sectarg.fontFamily, FontWeight.findByName(sectarg.fontStyle), FontPosture.findByName(sectarg.fontStyle), sectarg.fontSize.getValueAsFloat() * this.csize));
+		this.gtx.setTextAlign(sectarg.textAlign);
+		this.gtx.setTextBaseline(sectarg.textBaseline);
 		
-		gtx.scale(1, -1);
+		this.gtx.scale(1, -1);
 		
-		gtx.fillText(txt, 0, 0);
+		this.gtx.fillText(txt, 0, 0);
 	}
 	
 	public Canvas getCanvas() {
@@ -513,7 +517,7 @@ public class Renderer {
 	}
 	
 	public boolean isMotionBlur() {
-		return motionBlur;
+		return this.motionBlur;
 	}
 	
 	public void setMotionBlur(boolean motionBlur) {
@@ -521,7 +525,7 @@ public class Renderer {
 	}
 	
 	public float getMotionBlurAmount() {
-		return motionBlurAmount;
+		return this.motionBlurAmount;
 	}
 	
 	public void setMotionBlurAmount(float motionBlurAmount) {

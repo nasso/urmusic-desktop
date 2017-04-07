@@ -3,6 +3,8 @@ package io.github.nasso.urmusic.core;
 import io.github.nasso.urmusic.expression.ExpressionProperty;
 
 public class FreqSection extends AnalyserSection {
+	public static final SectionType THIS_TYPE = SectionType.FREQ;
+	
 	public ExpressionProperty minDecibels = new ExpressionProperty("-100");
 	public ExpressionProperty maxDecibels = new ExpressionProperty("-20");
 	public ExpressionProperty minHeight = new ExpressionProperty("0.01");
@@ -16,6 +18,10 @@ public class FreqSection extends AnalyserSection {
 	
 	public FreqSection(PrimitiveProperties p) {
 		super(p);
+	}
+	
+	public String toString() {
+		return this.getClass().getSimpleName();
 	}
 	
 	public void dispose() {
@@ -37,6 +43,19 @@ public class FreqSection extends AnalyserSection {
 		this.freqStart.setExpr(p.getString("freqStart", "0"));
 		this.freqEnd.setExpr(p.getString("freqEnd", "0.03"));
 		this.clampToMaxDecibels = p.getBool("clampToMaxDecibels", false); // For backward compatibility
+	}
+	
+	public void set(SectionTarget other) {
+		if(!(other instanceof FreqSection)) return;
+		
+		super.set(other);
+		FreqSection fs = (FreqSection) other;
+		this.minDecibels.setExpr(fs.minDecibels.getExpr());
+		this.maxDecibels.setExpr(fs.maxDecibels.getExpr());
+		this.minHeight.setExpr(fs.minHeight.getExpr());
+		this.freqStart.setExpr(fs.freqStart.getExpr());
+		this.freqEnd.setExpr(fs.freqEnd.getExpr());
+		this.clampToMaxDecibels = fs.clampToMaxDecibels;
 	}
 	
 	public void refreshOwnProperties(FrameProperties props) {

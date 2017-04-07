@@ -5,6 +5,8 @@ import javafx.geometry.VPos;
 import javafx.scene.text.TextAlignment;
 
 public class TextSection implements SectionTarget {
+	public static final SectionType THIS_TYPE = SectionType.TEXT;
+	
 	public ExpressionProperty text = new ExpressionProperty("\"Type your text here\"");
 	public String fontFamily = "sans-serif";
 	public ExpressionProperty fontSize = new ExpressionProperty("0.2");
@@ -18,6 +20,10 @@ public class TextSection implements SectionTarget {
 	
 	public TextSection(PrimitiveProperties p) {
 		this.set(p);
+	}
+	
+	public String toString() {
+		return this.getClass().getSimpleName();
 	}
 	
 	public void dispose() {
@@ -38,6 +44,18 @@ public class TextSection implements SectionTarget {
 		else if(baseline.equalsIgnoreCase("MIDDLE")) baseline = "CENTER";
 		
 		this.textBaseline = VPos.valueOf(baseline);
+	}
+	
+	public void set(SectionTarget other) {
+		if(!(other instanceof TextSection)) return;
+		
+		TextSection ts = (TextSection) other;
+		this.text.setExpr(ts.text.getExpr());
+		this.fontFamily = ts.fontFamily;
+		this.fontSize.setExpr(ts.fontSize.getExpr());
+		this.fontStyle = ts.fontStyle;
+		this.textAlign = ts.textAlign;
+		this.textBaseline = ts.textBaseline;
 	}
 	
 	public void refreshOwnProperties(FrameProperties props) {

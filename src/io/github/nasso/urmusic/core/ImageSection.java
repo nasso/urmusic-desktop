@@ -8,7 +8,9 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 
 public class ImageSection implements SectionTarget {
-	private String imageURL = "";
+	public static final SectionType THIS_TYPE = SectionType.IMAGE;
+	
+	private String imageURL = null;
 	public ExpressionProperty imageBorderRadius = new ExpressionProperty("0.0");
 	public boolean opaque = false;
 	public ExpressionProperty borderSize = new ExpressionProperty("0.0");
@@ -26,6 +28,10 @@ public class ImageSection implements SectionTarget {
 		this.set(p);
 	}
 	
+	public String toString() {
+		return this.getClass().getSimpleName();
+	}
+	
 	public void dispose() {
 		this.imageBorderRadius.dispose();
 		this.borderSize.dispose();
@@ -37,13 +43,15 @@ public class ImageSection implements SectionTarget {
 	}
 	
 	public String getImageURL() {
-		return imageURL;
+		return this.imageURL;
 	}
 	
 	public void setImageURL(String imageURL) {
 		this.imageURL = imageURL;
 		
-		if(!this.imageURL.equals("")) {
+		if(imageURL == null) {
+			this.image = null;
+		} else if(!this.imageURL.equals("")) {
 			if(this.imageURL.startsWith("data:")) {
 				this.image = new Image(new ByteArrayInputStream(Base64.getDecoder().decode(this.imageURL.substring(this.imageURL.indexOf(",") + 1))));
 			}
@@ -67,5 +75,18 @@ public class ImageSection implements SectionTarget {
 		
 		this.borderColor = Color.web(p.getString("borderColor", "#ffffff"));
 		this.borderVisible = p.getBool("borderVisible", false);
+	}
+	
+	public void set(SectionTarget other) {
+		if(!(other instanceof ImageSection)) return;
+		
+		ImageSection is = (ImageSection) other;
+		this.imageURL = is.imageURL;
+		this.imageBorderRadius.setExpr(is.imageBorderRadius.getExpr());
+		this.opaque = is.opaque;
+		this.borderSize.setExpr(is.borderSize.getExpr());
+		this.borderColor = is.borderColor;
+		this.borderVisible = is.borderVisible;
+		this.image = is.image;
 	}
 }

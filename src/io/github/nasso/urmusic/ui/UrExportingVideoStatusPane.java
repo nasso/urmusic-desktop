@@ -145,7 +145,7 @@ public class UrExportingVideoStatusPane extends Pane {
 	public void update(WritableImage img, float per, long now_nano) {
 		float now_sec = now_nano / 1_000_000_000f;
 		
-		this.etaLabel.setText("ETA: " + Utils.prettyTime((now_sec - start_time_sec) / per * (1.0 - per), false, true));
+		this.etaLabel.setText("ETA: " + Utils.prettyTime((now_sec - this.start_time_sec) / per * (1.0 - per), false, true));
 		this.exportProgressLabel.setText("Exporting video... " + (Math.floor(per * 100000.0) / 1000.0) + "%");
 		this.currentTimeLabel.setText(Utils.prettyTime(per * this.exportSettings.durationSec, true));
 		this.progress.set(per);

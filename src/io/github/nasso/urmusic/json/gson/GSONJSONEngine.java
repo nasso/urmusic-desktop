@@ -1,5 +1,8 @@
 package io.github.nasso.urmusic.json.gson;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
 
 import com.google.gson.Gson;
@@ -9,7 +12,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.google.gson.stream.JsonWriter;
 
+import io.github.nasso.urmusic.Urmusic;
 import io.github.nasso.urmusic.json.JSONArray;
 import io.github.nasso.urmusic.json.JSONEngine;
 import io.github.nasso.urmusic.json.JSONObject;
@@ -21,7 +26,7 @@ public class GSONJSONEngine implements JSONEngine {
 	private Gson gson;
 	
 	public GSONJSONEngine() {
-		serializer = new JsonSerializer<JSONSerializable>() {
+		this.serializer = new JsonSerializer<JSONSerializable>() {
 			public JsonElement serialize(JSONSerializable src, Type typeOfSrc, JsonSerializationContext context) {
 				Object o = src.toJSON(GSONJSONEngine.this);
 				
@@ -32,16 +37,17 @@ public class GSONJSONEngine implements JSONEngine {
 		};
 		
 		GsonBuilder builder = new GsonBuilder();
-		builder.registerTypeHierarchyAdapter(JSONSerializable.class, serializer);
+		builder.registerTypeHierarchyAdapter(JSONSerializable.class, this.serializer);
+		if(Urmusic.DEBUG) builder.setPrettyPrinting();
 		this.gson = builder.create();
 	}
 	
 	public String stringify(Object obj) {
-		return gson.toJson(obj);
+		return this.gson.toJson(obj);
 	}
 	
 	public JSONObject parse(String str) {
-		return GSONJSONObject.get(gson.fromJson(str, JsonObject.class));
+		return GSONJSONObject.get(this.gson.fromJson(str, JsonObject.class));
 	}
 	
 	public JSONObject createObject() {
@@ -50,5 +56,21 @@ public class GSONJSONEngine implements JSONEngine {
 	
 	public JSONArray createArray() {
 		return GSONJSONArray.get(new JsonArray());
+	}
+	
+	public String stringify(JSONObject jsonobj) {
+		if(!(jsonobj instanceof GSONJSONObject)) return null;
+		
+		return this.gson.toJson(((GSONJSONObject) jsonobj).gsonObj);
+	}
+	
+	public void write(JSONObject jsonobj, OutputStream out) {
+		try {
+			JsonWriter writer = this.gson.newJsonWriter(new OutputStreamWriter(out));
+			this.gson.toJson(((GSONJSONObject) jsonobj).gsonObj, writer);
+			writer.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

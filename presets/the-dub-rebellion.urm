@@ -1,4 +1,5 @@
 {
+	"version": "V1_0",
 	"smoothingTimeConstant": "0.5",
 	"sections": [
 		{
